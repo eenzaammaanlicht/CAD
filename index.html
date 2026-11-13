@@ -1,0 +1,3095 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoCAD Vision Studio — Tạo Bản Vẽ Kỹ Thuật Từ Ảnh Chụp</title>
+  <style>
+    /* =========================================================================
+       1. HỆ THỐNG GIAO DIỆN & BIẾN MÀU KỸ THUẬT (ZERO EXTERNAL DEPENDENCIES)
+       ========================================================================= */
+    :root {
+      --bg-app: #E5E7EB;
+      --bg-panel: #F3F4F6;
+      --bg-card: #FFFFFF;
+      --bg-header: #111827;
+      --bg-status: #1F2937;
+      --border-color: #D1D5DB;
+      --border-subtle: #E5E7EB;
+      --text-main: #111827;
+      --text-muted: #4B5563;
+      --text-light: #6B7280;
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --emerald: #059669;
+      --emerald-hover: #047857;
+      --danger: #DC2626;
+      --danger-bg: #FEE2E2;
+      --accent-orange: #F97316;
+      --radius: 8px;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Thanh Header trên cùng */
+    .app-header {
+      background-color: var(--bg-header);
+      color: #FFFFFF;
+      min-height: 48px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+      z-index: 20;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .brand-title {
+      color: #34D399;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-sub {
+      color: #9CA3AF;
+      font-size: 12px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Nút bấm chuẩn */
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 6px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: background-color 0.15s, transform 0.05s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-dark {
+      background-color: #374151;
+      color: #FFFFFF;
+    }
+    .btn-dark:hover {
+      background-color: #4B5563;
+    }
+
+    .btn-emerald {
+      background-color: var(--emerald);
+      color: #FFFFFF;
+    }
+    .btn-emerald:hover {
+      background-color: var(--emerald-hover);
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #FFFFFF;
+      font-size: 13px;
+      padding: 10px 14px;
+      width: 100%;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    }
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-light {
+      background-color: #FFFFFF;
+      color: var(--text-main);
+      border-color: var(--border-color);
+    }
+    .btn-light:hover {
+      background-color: #F9FAFB;
+      border-color: #9CA3AF;
+    }
+
+    .btn-subtle {
+      background-color: #E5E7EB;
+      color: #1F2937;
+    }
+    .btn-subtle:hover {
+      background-color: #D1D5DB;
+    }
+
+    .btn-danger {
+      background-color: var(--danger-bg);
+      color: #B91C1C;
+    }
+    .btn-danger:hover {
+      background-color: #FECACA;
+    }
+
+    /* Bố cục thân ứng dụng */
+    .workspace {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      padding: 6px;
+      gap: 6px;
+    }
+
+    /* Cột trái: Bảng điều khiển thu nhận ảnh & kích thước */
+    .sidebar {
+      width: 400px;
+      min-width: 360px;
+      max-width: 100%;
+      background-color: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 9px 10px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Thẻ từng hướng chiếu */
+    .view-card {
+      background-color: #F9FAFB;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .view-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .view-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+
+    .view-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 3px;
+    }
+
+    .view-controls .btn {
+      padding: 4px 7px;
+      font-size: 11px;
+    }
+
+    .shape-select {
+      padding: 4px 5px;
+      font-size: 11px;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      background-color: #FFFFFF;
+      color: #111827;
+      font-weight: 600;
+      cursor: pointer;
+      max-width: 124px;
+    }
+
+    .file-status {
+      font-size: 10.5px;
+      color: var(--text-light);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-status.loaded {
+      color: var(--emerald);
+      font-weight: 600;
+    }
+
+    .thumb-box {
+      width: 68px;
+      height: 50px;
+      background-color: #E5E7EB;
+      border: 1px solid #CBD5E1;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .thumb-box canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .thumb-placeholder {
+      font-size: 10px;
+      color: #6B7280;
+    }
+
+    /* Sơ đồ minh họa góc chiếu thứ nhất */
+    .diagram-box {
+      background-color: #F8FAFC;
+      border: 1px solid #CBD5E1;
+      border-radius: 6px;
+      padding: 4px;
+      margin-top: 2px;
+    }
+
+    /* Lưới nhập kích thước W, H, D */
+    .dim-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 7px;
+    }
+
+    .dim-field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #1F2937;
+      margin-bottom: 3px;
+    }
+
+    .dim-field input {
+      width: 100%;
+      padding: 5px 7px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      color: #111827;
+      background-color: #FFFFFF;
+    }
+
+    .dim-field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+
+    /* Cột phải: Trình biên tập CAD 2D */
+    .editor-area {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .ribbon-bar {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 5px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .tool-group, .edit-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .tool-btn {
+      background-color: #F3F4F6;
+      color: #1F2937;
+      border: 1px solid #D1D5DB;
+      border-radius: 5px;
+      padding: 5px 8px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tool-btn:hover {
+      background-color: #E5E7EB;
+    }
+
+    .tool-btn.active {
+      background-color: #DBEAFE;
+      color: #1D4ED8;
+      border-color: #2563EB;
+      font-weight: 700;
+    }
+
+    .ortho-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #1D4ED8;
+      padding: 4px 8px;
+      background-color: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    /* Thanh đổi lớp nét nhanh */
+    .layer-bar {
+      background-color: #F9FAFB;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .layer-buttons {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .layer-btn {
+      background-color: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .layer-btn:hover {
+      background-color: #F1F5F9;
+    }
+
+    .hint-text {
+      font-size: 11px;
+      color: #6B7280;
+      font-style: italic;
+    }
+
+    /* Khung Canvas CAD */
+    .canvas-wrapper {
+      flex: 1;
+      min-height: 260px;
+      background-color: #CBD5E1;
+      border: 1px solid #94A3B8;
+      border-radius: var(--radius);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #cadCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    /* Thanh trạng thái dưới cùng */
+    .status-bar {
+      background-color: var(--bg-status);
+      color: #E5E7EB;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 11.5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Hộp thoại Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(17, 24, 39, 0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background-color: #FFFFFF;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      animation: popIn 0.14s ease-out;
+    }
+
+    .modal-box.camera-modal {
+      max-width: 680px;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+      background-color: #111827;
+      color: #FFFFFF;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover {
+      color: #FFFFFF;
+    }
+
+    .modal-body {
+      padding: 14px;
+    }
+
+    .form-row {
+      margin-bottom: 10px;
+    }
+
+    .form-row label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+
+    .form-row input, .form-row textarea, .form-row select {
+      width: 100%;
+      padding: 7px 9px;
+      font-size: 12.5px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-family: inherit;
+    }
+
+    .modal-footer {
+      padding: 10px 14px;
+      background-color: #F9FAFB;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* Camera Viewport trong Modal */
+    .camera-stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background-color: #090D16;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #cameraVideo {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #cameraOverlayCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Thông báo Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 34px;
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    .toast {
+      background-color: #111827;
+      color: #FFFFFF;
+      padding: 9px 14px;
+      border-radius: 7px;
+      font-size: 12.5px;
+      font-weight: 600;
+      box-shadow: var(--shadow-md);
+      border-left: 4px solid var(--emerald);
+      max-width: 360px;
+      animation: slideUp 0.18s ease-out;
+    }
+
+    .toast.warn {
+      border-left-color: #F59E0B;
+    }
+    .toast.error {
+      border-left-color: #EF4444;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Đáp ứng màn hình nhỏ / máy chiếu */
+    @media (max-width: 960px) {
+      body {
+        height: auto;
+        overflow: auto;
+      }
+      .workspace {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+      }
+      .canvas-wrapper {
+        height: 540px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =======================================================================
+       THANH TIÊU ĐỀ TRÊN CÙNG (HEADER BAR)
+       ======================================================================= -->
+  <header class="app-header">
+    <div class="brand-group">
+      <div class="brand-title">📐 AUTOCAD VISION STUDIO</div>
+      <div class="brand-sub">Tạo bản vẽ hình chiếu vuông góc chuẩn TCVN &amp; xuất file CAD (.DXF)</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-dark" id="btnOpenTitleModal" title="Chỉnh sửa thông tin khung tên bản vẽ">
+        📝 Sửa Khung Tên
+      </button>
+      <button class="btn btn-dark" id="btnExportPng" title="Lưu ảnh bản vẽ độ phân giải cao">
+        🖼️ Xuất PNG
+      </button>
+      <button class="btn btn-emerald" id="btnExportDxf" title="Xuất file bản vẽ kỹ thuật chuẩn AutoCAD (.DXF)">
+        💾 XUẤT FILE CAD (.DXF)
+      </button>
+    </div>
+  </header>
+
+  <!-- =======================================================================
+       KHUNG LÀM VIỆC CHÍNH (SIDEBAR TRÁI + CAD CANVAS PHẢI)
+       ======================================================================= -->
+  <main class="workspace">
+
+    <!-- CỘT TRÁI: THU NHẬN 3 GÓC CHIẾU & KÍCH THƯỚC -->
+    <aside class="sidebar">
+
+      <!-- KHỐI 1 & 2: THU NHẬN 3 HƯỚNG CHIẾU -->
+      <section class="card">
+        <div class="card-title">
+          <span>1 &amp; 2. Thu nhận 3 hướng chiếu (Góc chiếu thứ nhất)</span>
+        </div>
+
+        <!-- Hướng 1: Chính diện -> Hình chiếu đứng -->
+        <div class="view-card">
+          <div class="view-info">
+            <div class="view-label">Hướng 1: Chính diện → Hình chiếu đứng</div>
+            <div class="view-controls">
+              <button class="btn btn-light" onclick="App.openCameraModal('front')">📷 Chụp Camera</button>
+              <button class="btn btn-light" onclick="App.triggerFileUpload('front')">📂 Tải ảnh</button>
+              <select class="shape-select" id="shape_front" title="Chế độ nhận diện hình dạng">
+                <option value="AUTO" selected>Tự động (CAD)</option>
+                <option value="RECT">Hình chữ nhật</option>
+                <option value="CIRCLE">Hình tròn</option>
+                <option value="POLY">Đa giác bậc/vát</option>
+              </select>
+            </div>
+            <div class="file-status" id="status_front">Chưa có dữ liệu ảnh</div>
+          </div>
+          <div class="thumb-box" id="thumbBox_front">
+            <span class="thumb-placeholder">Trống</span>
+          </div>
+        </div>
+
+        <!-- Hướng 2: Từ trên xuống -> Hình chiếu bằng -->
+        <div class="view-card">
+          <div class="view-info">
+            <div class="view-label">Hướng 2: Từ trên xuống → Hình chiếu bằng</div>
+            <div class="view-controls">
+              <button class="btn btn-light" onclick="App.openCameraModal('top')">📷 Chụp Camera</button>
+              <button class="btn btn-light" onclick="App.triggerFileUpload('top')">📂 Tải ảnh</button>
+              <select class="shape-select" id="shape_top" title="Chế độ nhận diện hình dạng">
+                <option value="AUTO" selected>Tự động (CAD)</option>
+                <option value="RECT">Hình chữ nhật</option>
+                <option value="CIRCLE">Hình tròn</option>
+                <option value="POLY">Đa giác bậc/vát</option>
+              </select>
+            </div>
+            <div class="file-status" id="status_top">Chưa có dữ liệu ảnh</div>
+          </div>
+          <div class="thumb-box" id="thumbBox_top">
+            <span class="thumb-placeholder">Trống</span>
+          </div>
+        </div>
+
+        <!-- Hướng 3: Từ bên cạnh -> Hình chiếu cạnh -->
+        <div class="view-card">
+          <div class="view-info">
+            <div class="view-label">Hướng 3: Từ bên cạnh → Hình chiếu cạnh</div>
+            <div class="view-controls">
+              <button class="btn btn-light" onclick="App.openCameraModal('left')">📷 Chụp Camera</button>
+              <button class="btn btn-light" onclick="App.triggerFileUpload('left')">📂 Tải ảnh</button>
+              <select class="shape-select" id="shape_left" title="Chế độ nhận diện hình dạng">
+                <option value="AUTO" selected>Tự động (CAD)</option>
+                <option value="RECT">Hình chữ nhật</option>
+                <option value="CIRCLE">Hình tròn</option>
+                <option value="POLY">Đa giác bậc/vát</option>
+              </select>
+            </div>
+            <div class="file-status" id="status_left">Chưa có dữ liệu ảnh</div>
+          </div>
+          <div class="thumb-box" id="thumbBox_left">
+            <span class="thumb-placeholder">Trống</span>
+          </div>
+        </div>
+
+        <!-- Input file ẩn dùng chung -->
+        <input type="file" id="hiddenFileInput" accept="image/*" style="display:none" />
+
+        <!-- Sơ đồ minh họa Phương pháp chiếu góc thứ nhất TCVN -->
+        <div class="diagram-box">
+          <svg width="100%" height="74" viewBox="0 0 365 74">
+            <text x="182" y="12" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1E293B">
+              Sơ đồ bố trí chuẩn (Phương pháp chiếu góc thứ nhất - TCVN)
+            </text>
+            <!-- Hình chiếu đứng -->
+            <rect x="34" y="21" width="52" height="26" fill="#FFFFFF" stroke="#111827" stroke-width="1.8" />
+            <text x="60" y="37" text-anchor="middle" font-size="9.5" font-weight="700" fill="#111827">Đứng</text>
+            <!-- Hình chiếu bằng -->
+            <rect x="34" y="53" width="52" height="17" fill="#FFFFFF" stroke="#111827" stroke-width="1.8" />
+            <text x="60" y="64.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#111827">Bằng</text>
+            <!-- Hình chiếu cạnh -->
+            <rect x="100" y="21" width="30" height="26" fill="#FFFFFF" stroke="#111827" stroke-width="1.8" />
+            <text x="115" y="37" text-anchor="middle" font-size="9.5" font-weight="700" fill="#111827">Cạnh</text>
+            <!-- Đường gióng xanh -->
+            <line x1="34" y1="47" x2="34" y2="53" stroke="#059669" stroke-dasharray="2,2" />
+            <line x1="86" y1="47" x2="86" y2="53" stroke="#059669" stroke-dasharray="2,2" />
+            <line x1="86" y1="21" x2="100" y2="21" stroke="#059669" stroke-dasharray="2,2" />
+            <line x1="86" y1="47" x2="100" y2="47" stroke="#059669" stroke-dasharray="2,2" />
+            <!-- Ghi chú hướng dẫn -->
+            <text x="144" y="31" font-size="9.8" fill="#334155">• Đặt vật trên nền đồng màu</text>
+            <text x="144" y="46" font-size="9.8" fill="#334155">• Chụp thẳng góc 90° từng mặt</text>
+            <text x="144" y="61" font-size="9.8" fill="#334155">• Giữ trọn vật trong khung xanh</text>
+          </svg>
+        </div>
+      </section>
+
+      <!-- KHỐI 3: KÍCH THƯỚC THỰC TẾ VẬT THỂ -->
+      <section class="card">
+        <div class="card-title">
+          <span>3. Kích thước thực tế vật thể (mm)</span>
+        </div>
+        <div class="dim-grid">
+          <div class="dim-field">
+            <label for="inputW">Rộng W (mm):</label>
+            <input type="number" id="inputW" value="148.0" step="0.5" min="0.1" />
+          </div>
+          <div class="dim-field">
+            <label for="inputH">Cao H (mm):</label>
+            <input type="number" id="inputH" value="210.0" step="0.5" min="0.1" />
+          </div>
+          <div class="dim-field">
+            <label for="inputD" title="Độ dày từ mặt trước ra mặt sau">Sâu D (dày):</label>
+            <input type="number" id="inputD" value="15.0" step="0.5" min="0.1" />
+          </div>
+        </div>
+        <button class="btn btn-light" id="btnEstimateHD" style="width:100%; font-size:11.5px;">
+          📐 Ước tính Cao (H) &amp; Sâu (D) theo tỉ lệ ảnh từ Rộng (W)
+        </button>
+      </section>
+
+      <!-- NÚT TẠO BẢN VẼ TỰ ĐỘNG -->
+      <button class="btn btn-primary" id="btnGenerateCad">
+        ⚙ TẠO BẢN VẼ 3 HÌNH CHIẾU TỰ ĐỘNG
+      </button>
+
+    </aside>
+
+    <!-- CỘT PHẢI: TRÌNH BIÊN TẬP BẢN VẼ CAD 2D -->
+    <section class="editor-area">
+
+      <!-- Thanh công cụ Ribbon -->
+      <div class="ribbon-bar">
+        <div class="tool-group" id="toolButtonGroup">
+          <button class="tool-btn active" data-tool="SELECT">🖱 Chọn / Sửa</button>
+          <button class="tool-btn" data-tool="NET_LIEN_DAM">➖ Nét liền đậm</button>
+          <button class="tool-btn" data-tool="NET_DUT_MANH">┄ Nét đứt khuất</button>
+          <button class="tool-btn" data-tool="NET_GACH_CHAM">中心 Đường tâm</button>
+          <button class="tool-btn" data-tool="CIRCLE">⭕ Đường tròn</button>
+          <button class="tool-btn" data-tool="DIM">📏 Ghi kích thước</button>
+        </div>
+
+        <div class="edit-group">
+          <label class="ortho-toggle" title="Khóa vẽ thẳng đứng / nằm ngang (Phím F8)">
+            <input type="checkbox" id="chkOrtho" checked />
+            <span>Vuông góc (F8)</span>
+          </label>
+          <button class="btn btn-danger" id="btnDeleteSel" title="Xóa đối tượng đang chọn (Delete)">🗑 Xóa chọn</button>
+          <button class="btn btn-subtle" id="btnUndo" title="Hoàn tác (Ctrl+Z)">↩ Hoàn tác</button>
+          <button class="btn btn-subtle" id="btnRedo" title="Làm lại (Ctrl+Y)">↪ Làm lại</button>
+          <button class="btn btn-subtle" id="btnFitView" title="Thu phóng vừa khít khổ giấy A4">🔍 Vừa khung</button>
+        </div>
+      </div>
+
+      <!-- Thanh đổi lớp nét nhanh & hướng dẫn -->
+      <div class="layer-bar">
+        <div class="layer-buttons">
+          <span style="font-size:11px; color:#4B5563; font-weight:600;">Đổi lớp nét đang chọn:</span>
+          <button class="layer-btn" style="color:#111827;" onclick="App.changeSelectedLayer('NET_LIEN_DAM')">Nét liền đậm</button>
+          <button class="layer-btn" style="color:#059669;" onclick="App.changeSelectedLayer('NET_LIEN_MANH')">Nét liền mảnh</button>
+          <button class="layer-btn" style="color:#2563EB;" onclick="App.changeSelectedLayer('NET_DUT_MANH')">Nét đứt mảnh</button>
+          <button class="layer-btn" style="color:#DC2626;" onclick="App.changeSelectedLayer('NET_GACH_CHAM')">Nét gạch chấm mảnh</button>
+        </div>
+        <div class="hint-text">
+          Nhấp đúp số kích thước hoặc khung tên để sửa • Cuộn chuột: Zoom • Chuột giữa / Space+Kéo: Di chuyển
+        </div>
+      </div>
+
+      <!-- Vùng vẽ CAD 2D -->
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <canvas id="cadCanvas"></canvas>
+      </div>
+
+      <!-- Thanh trạng thái -->
+      <div class="status-bar">
+        <span id="statusCoords">Sẵn sàng | Tọa độ: (0.0, 0.0) mm | Khổ giấy: A4 (297 x 210 mm)</span>
+        <span id="statusScale">Tỉ lệ: 1:1 | Ortho(F8): ON | Đối tượng: 0</span>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- =======================================================================
+       MODAL 1: CHỤP ẢNH CAMERA WEBRTC VỚI KHUNG CĂN CHỈNH & XEM TRƯỚC NÉT [E]
+       ======================================================================= -->
+  <div class="modal-backdrop" id="cameraModal">
+    <div class="modal-box camera-modal">
+      <div class="modal-header">
+        <span id="cameraModalTitle">📷 Chụp ảnh hướng chiếu</span>
+        <button class="modal-close" onclick="App.closeCameraModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label for="cameraSelect" style="font-size:12px; font-weight:600;">Chọn Camera:</label>
+            <select id="cameraSelect" style="padding:4px 8px; border-radius:5px; border:1px solid #D1D5DB; font-size:12px;"></select>
+          </div>
+          <button class="btn btn-light" id="btnToggleEdgePreview" style="font-size:11.5px;">
+            👁 Bật/Tắt xem trước nét biên [E]
+          </button>
+        </div>
+        <div class="camera-stage">
+          <video id="cameraVideo" autoplay playsinline muted></video>
+          <canvas id="cameraOverlayCanvas"></canvas>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-subtle" onclick="App.closeCameraModal()">Hủy [ESC]</button>
+        <button class="btn btn-emerald" id="btnSnapCamera">📸 Chụp Ảnh &amp; Sử Dụng [SPACE]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 2: CHỈNH SỬA KHUNG TÊN TCVN & YÊU CẦU KỸ THUẬT
+       ======================================================================= -->
+  <div class="modal-backdrop" id="titleBlockModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>📝 Chỉnh sửa thông tin Khung tên &amp; Yêu cầu kỹ thuật</span>
+        <button class="modal-close" onclick="App.closeModal('titleBlockModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label for="metaPartName">Tên bản vẽ / Chi tiết:</label>
+          <input type="text" id="metaPartName" placeholder="VD: BAN VE CHI TIET" />
+        </div>
+        <div class="form-row">
+          <label for="metaMaterial">Vật liệu (để trống nếu không ghi):</label>
+          <input type="text" id="metaMaterial" placeholder="VD: Thep C45 hoặc để trống" />
+        </div>
+        <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label for="metaAuthor">Người vẽ:</label>
+            <input type="text" id="metaAuthor" placeholder="Nhập tên người vẽ" />
+          </div>
+          <div>
+            <label for="metaChecker">Người kiểm tra:</label>
+            <input type="text" id="metaChecker" placeholder="Nhập tên người kiểm tra" />
+          </div>
+        </div>
+        <div class="form-row">
+          <label for="metaOrg">Đơn vị / Lớp (để trống nếu không ghi):</label>
+          <input type="text" id="metaOrg" placeholder="Để trống nếu không cần" />
+        </div>
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="metaReqText">Yêu cầu kỹ thuật (hiển thị phía trên khung tên):</label>
+          <textarea id="metaReqText" rows="3" placeholder="VD: 1. Dung sai chung theo TCVN 2263-77."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-subtle" onclick="App.closeModal('titleBlockModal')">Hủy</button>
+        <button class="btn btn-primary" style="width:auto;" id="btnSaveTitleBlock">✔ Cập nhật Khung tên</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 3: HIỆU CHỈNH GIÁ TRỊ CON SỐ KÍCH THƯỚC
+       ======================================================================= -->
+  <div class="modal-backdrop" id="dimEditModal">
+    <div class="modal-box" style="max-width:360px;">
+      <div class="modal-header">
+        <span>📏 Hiệu chỉnh giá trị kích thước</span>
+        <button class="modal-close" onclick="App.closeModal('dimEditModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row" style="margin-bottom:0;">
+          <label for="inputDimValue">Nhập chữ số kích thước mới (mm):</label>
+          <input type="text" id="inputDimValue" placeholder="VD: 148.0 hoặc Ø20" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-subtle" onclick="App.closeModal('dimEditModal')">Hủy</button>
+        <button class="btn btn-primary" style="width:auto;" id="btnSaveDimValue">✔ Lưu kích thước</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vùng hiển thị thông báo Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    /* =========================================================================
+       1. MÔ HÌNH DỮ LIỆU BẢN VẼ KỸ THUẬT (CAD DOCUMENT - CHUẨN TCVN)
+       ========================================================================= */
+    class CadDocument {
+      static LAYERS = {
+        NET_LIEN_DAM: {
+          name: "Nét liền đậm",
+          uiColor: "#111827",
+          dxfColor: 7,
+          lineweight: 50,
+          uiWidth: 2.2,
+          uiDash: [],
+          dxfLinetype: "CONTINUOUS"
+        },
+        NET_LIEN_MANH: {
+          name: "Nét liền mảnh",
+          uiColor: "#059669",
+          dxfColor: 3,
+          lineweight: 25,
+          uiWidth: 1.1,
+          uiDash: [],
+          dxfLinetype: "CONTINUOUS"
+        },
+        NET_DUT_MANH: {
+          name: "Nét đứt mảnh",
+          uiColor: "#2563EB",
+          dxfColor: 4,
+          lineweight: 25,
+          uiWidth: 1.3,
+          uiDash: [6, 4],
+          dxfLinetype: "DASHED"
+        },
+        NET_GACH_CHAM: {
+          name: "Nét gạch chấm mảnh",
+          uiColor: "#DC2626",
+          dxfColor: 1,
+          lineweight: 25,
+          uiWidth: 1.1,
+          uiDash: [12, 3, 2, 3],
+          dxfLinetype: "CENTER"
+        }
+      };
+
+      constructor() {
+        this.entities = [];
+        this.undoStack = [];
+        this.redoStack = [];
+        this.nextId = 1;
+        this.meta = {
+          part_name: "BAN VE CHI TIET",
+          material: "",
+          org_name: "",
+          scale_label: "1:1",
+          scale_factor: 1.0,
+          author: "",
+          checker: "",
+          req_text: ""
+        };
+      }
+
+      commitState() {
+        this.undoStack.push(JSON.parse(JSON.stringify(this.entities)));
+        if (this.undoStack.length > 40) this.undoStack.shift();
+        this.redoStack = [];
+      }
+
+      undo() {
+        if (!this.undoStack.length) return false;
+        this.redoStack.push(JSON.parse(JSON.stringify(this.entities)));
+        this.entities = this.undoStack.pop();
+        return true;
+      }
+
+      redo() {
+        if (!this.redoStack.length) return false;
+        this.undoStack.push(JSON.parse(JSON.stringify(this.entities)));
+        this.entities = this.redoStack.pop();
+        return true;
+      }
+
+      clear(record = true) {
+        if (record) this.commitState();
+        this.entities = [];
+      }
+
+      addLine(p1, p2, layer = "NET_LIEN_DAM", record = true) {
+        if (Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) < 0.15) return null;
+        if (record) this.commitState();
+        const ent = {
+          id: this.nextId++,
+          type: "LINE",
+          p1: [Number(p1[0].toFixed(3)), Number(p1[1].toFixed(3))],
+          p2: [Number(p2[0].toFixed(3)), Number(p2[1].toFixed(3))],
+          layer
+        };
+        this.entities.push(ent);
+        return ent;
+      }
+
+      addCircle(center, radius, layer = "NET_LIEN_DAM", withCenterlines = true, record = true) {
+        if (radius < 0.25) return null;
+        if (record) this.commitState();
+        const cx = Number(center[0].toFixed(3));
+        const cy = Number(center[1].toFixed(3));
+        const r = Number(radius.toFixed(3));
+        const ent = {
+          id: this.nextId++,
+          type: "CIRCLE",
+          center: [cx, cy],
+          radius: r,
+          layer
+        };
+        this.entities.push(ent);
+
+        if (withCenterlines) {
+          const ext = r + 3.0;
+          this.addLine([cx - ext, cy], [cx + ext, cy], "NET_GACH_CHAM", false);
+          this.addLine([cx, cy - ext], [cx, cy + ext], "NET_GACH_CHAM", false);
+        }
+        return ent;
+      }
+
+      addDimension(p1, p2, offset = 7.0, customText = null, layer = "NET_LIEN_MANH", record = true) {
+        const dist = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+        if (dist < 0.4) return null;
+        if (record) this.commitState();
+        const realVal = dist / Math.max(1e-6, this.meta.scale_factor);
+        const label = customText !== null ? String(customText) : realVal.toFixed(1);
+        const ent = {
+          id: this.nextId++,
+          type: "DIM",
+          p1: [Number(p1[0].toFixed(3)), Number(p1[1].toFixed(3))],
+          p2: [Number(p2[0].toFixed(3)), Number(p2[1].toFixed(3))],
+          offset: Number(offset.toFixed(3)),
+          text: label,
+          layer
+        };
+        this.entities.push(ent);
+        return ent;
+      }
+
+      deleteEntity(entId) {
+        this.commitState();
+        this.entities = this.entities.filter(e => e.id !== entId);
+      }
+
+      getSnapPoints() {
+        const pts = [];
+        for (const e of this.entities) {
+          if (e.type === "LINE") {
+            const [p1, p2] = [e.p1, e.p2];
+            pts.push([p1[0], p1[1], "END"]);
+            pts.push([p2[0], p2[1], "END"]);
+            pts.push([(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2, "MID"]);
+          } else if (e.type === "CIRCLE") {
+            const [cx, cy] = e.center;
+            const r = e.radius;
+            pts.push([cx, cy, "CENTER"]);
+            pts.push([cx - r, cy, "QUAD"]);
+            pts.push([cx + r, cy, "QUAD"]);
+            pts.push([cx, cy - r, "QUAD"]);
+            pts.push([cx, cy + r, "QUAD"]);
+          } else if (e.type === "DIM") {
+            pts.push([e.p1[0], e.p1[1], "END"]);
+            pts.push([e.p2[0], e.p2[1], "END"]);
+          }
+        }
+        return pts;
+      }
+    }
+
+    /* =========================================================================
+       2. ENGINE THỊ GIÁC MÁY TÍNH THUẦN JS SIÊU TỐC (OFFSCREEN IMAGEDATA <= 420PX)
+       ========================================================================= */
+    class VisionEngine {
+      /**
+       * Chuyển đổi RGB (0..255) sang CIE Lab
+       */
+      static rgbToLab(r, g, b) {
+        let R = r / 255, G = g / 255, B = b / 255;
+        R = R > 0.04045 ? Math.pow((R + 0.055) / 1.055, 2.4) : R / 12.92;
+        G = G > 0.04045 ? Math.pow((G + 0.055) / 1.055, 2.4) : G / 12.92;
+        B = B > 0.04045 ? Math.pow((B + 0.055) / 1.055, 2.4) : B / 12.92;
+
+        let X = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047;
+        let Y = (R * 0.2126 + G * 0.7152 + B * 0.0722) / 1.00000;
+        let Z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+
+        X = X > 0.008856 ? Math.cbrt(X) : (7.787 * X) + 16 / 116;
+        Y = Y > 0.008856 ? Math.cbrt(Y) : (7.787 * Y) + 16 / 116;
+        Z = Z > 0.008856 ? Math.cbrt(Z) : (7.787 * Z) + 16 / 116;
+
+        return [(116 * Y) - 16, 500 * (X - Y), 200 * (Y - Z)];
+      }
+
+      /**
+       * Tính ngưỡng tự động Otsu trên mảng Uint8Array
+       */
+      static otsuThreshold(u8Arr) {
+        const hist = new Int32Array(256);
+        const total = u8Arr.length;
+        for (let i = 0; i < total; i++) hist[u8Arr[i]]++;
+
+        let sum = 0;
+        for (let t = 0; t < 256; t++) sum += t * hist[t];
+
+        let sumB = 0, wB = 0, wF = 0;
+        let maxVar = 0, threshold = 127;
+
+        for (let t = 0; t < 256; t++) {
+          wB += hist[t];
+          if (wB === 0) continue;
+          wF = total - wB;
+          if (wF === 0) break;
+
+          sumB += t * hist[t];
+          const mB = sumB / wB;
+          const mF = (sum - sumB) / wF;
+          const varBetween = wB * wF * (mB - mF) * (mB - mF);
+          if (varBetween > maxVar) {
+            maxVar = varBetween;
+            threshold = t;
+          }
+        }
+        return threshold;
+      }
+
+      /**
+       * Phép toán hình thái học 1D tách trục siêu nhanh (Dilate / Erode)
+       */
+      static morph1D(mask, w, h, radius, isDilate) {
+        const temp = new Uint8Array(w * h);
+        const out = new Uint8Array(w * h);
+
+        // Ngang
+        for (let y = 0; y < h; y++) {
+          const row = y * w;
+          for (let x = 0; x < w; x++) {
+            const x0 = Math.max(0, x - radius);
+            const x1 = Math.min(w - 1, x + radius);
+            let val = isDilate ? 0 : 1;
+            for (let k = x0; k <= x1; k++) {
+              const v = mask[row + k];
+              if (isDilate) { if (v) { val = 1; break; } }
+              else { if (!v) { val = 0; break; } }
+            }
+            temp[row + x] = val;
+          }
+        }
+
+        // Dọc
+        for (let x = 0; x < w; x++) {
+          for (let y = 0; y < h; y++) {
+            const y0 = Math.max(0, y - radius);
+            const y1 = Math.min(h - 1, y + radius);
+            let val = isDilate ? 0 : 1;
+            for (let k = y0; k <= y1; k++) {
+              const v = temp[k * w + x];
+              if (isDilate) { if (v) { val = 1; break; } }
+              else { if (!v) { val = 0; break; } }
+            }
+            out[y * w + x] = val;
+          }
+        }
+        return out;
+      }
+
+      static morphCloseOpen(mask, w, h) {
+        // Closing (r=5) lấp bóng đổ/khe hở -> Opening (r=2) xóa nhiễu hạt nhỏ
+        let m = this.morph1D(mask, w, h, 5, true);
+        m = this.morph1D(m, w, h, 5, false);
+        m = this.morph1D(m, w, h, 2, false);
+        m = this.morph1D(m, w, h, 2, true);
+        return m;
+      }
+
+      /**
+       * Tìm thành phần liên thông lớn nhất và tập điểm biên ngoài
+       */
+      static findMainComponent(mask, w, h) {
+        const labels = new Int32Array(w * h);
+        const queue = new Int32Array(w * h);
+        let bestScore = -1;
+        let bestCompMask = null;
+        let bestBBox = null;
+
+        let labelId = 0;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const idx = y * w + x;
+            if (mask[idx] === 1 && labels[idx] === 0) {
+              labelId++;
+              let head = 0, tail = 0;
+              queue[tail++] = idx;
+              labels[idx] = labelId;
+
+              let minX = x, maxX = x, minY = y, maxY = y;
+              let area = 0;
+
+              while (head < tail) {
+                const cur = queue[head++];
+                area++;
+                const cx = cur % w;
+                const cy = (cur - cx) / w;
+                if (cx < minX) minX = cx;
+                if (cx > maxX) maxX = cx;
+                if (cy < minY) minY = cy;
+                if (cy > maxY) maxY = cy;
+
+                if (cx > 0 && mask[cur - 1] === 1 && labels[cur - 1] === 0) {
+                  labels[cur - 1] = labelId; queue[tail++] = cur - 1;
+                }
+                if (cx + 1 < w && mask[cur + 1] === 1 && labels[cur + 1] === 0) {
+                  labels[cur + 1] = labelId; queue[tail++] = cur + 1;
+                }
+                if (cy > 0 && mask[cur - w] === 1 && labels[cur - w] === 0) {
+                  labels[cur - w] = labelId; queue[tail++] = cur - w;
+                }
+                if (cy + 1 < h && mask[cur + w] === 1 && labels[cur + w] === 0) {
+                  labels[cur + w] = labelId; queue[tail++] = cur + w;
+                }
+              }
+
+              const areaRatio = area / (w * h);
+              if (areaRatio < 0.015 || areaRatio > 0.94) continue;
+              const touchesEdge = (minX <= 1 || minY <= 1 || maxX >= w - 2 || maxY >= h - 2);
+              const score = areaRatio * (touchesEdge ? 0.45 : 1.0);
+
+              if (score > bestScore) {
+                bestScore = score;
+                bestBBox = { minX, minY, maxX, maxY, area };
+                const compMask = new Uint8Array(w * h);
+                for (let k = 0; k < tail; k++) compMask[queue[k]] = 1;
+                bestCompMask = compMask;
+              }
+            }
+          }
+        }
+
+        if (!bestCompMask) return null;
+
+        // Trích xuất các điểm biên (4-neighborhood boundary)
+        const boundary = [];
+        for (let y = bestBBox.minY; y <= bestBBox.maxY; y++) {
+          for (let x = bestBBox.minX; x <= bestBBox.maxX; x++) {
+            const idx = y * w + x;
+            if (bestCompMask[idx] === 1) {
+              if (
+                x === 0 || y === 0 || x === w - 1 || y === h - 1 ||
+                !bestCompMask[idx - 1] || !bestCompMask[idx + 1] ||
+                !bestCompMask[idx - w] || !bestCompMask[idx + w]
+              ) {
+                boundary.push([x, y]);
+              }
+            }
+          }
+        }
+
+        return { compMask: bestCompMask, bbox: bestBBox, boundary };
+      }
+
+      /**
+       * Thuật toán Bao Lồi Monotone Chain (Convex Hull)
+       */
+      static convexHull(points) {
+        if (points.length <= 3) return points.slice();
+        const pts = points.slice().sort((a, b) => a[0] === b[0] ? a[1] - b[1] : a[0] - b[0]);
+        const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+
+        const lower = [];
+        for (const p of pts) {
+          while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+            lower.pop();
+          }
+          lower.push(p);
+        }
+
+        const upper = [];
+        for (let i = pts.length - 1; i >= 0; i--) {
+          const p = pts[i];
+          while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+            upper.pop();
+          }
+          upper.push(p);
+        }
+
+        upper.pop();
+        lower.pop();
+        return lower.concat(upper);
+      }
+
+      /**
+       * Đơn giản hóa đa giác khép kín (Ramer-Douglas-Peucker)
+       */
+      static simplifyClosedPoly(pts, epsilon) {
+        if (pts.length < 4) return pts.slice();
+
+        const perpDist = (p, a, b) => {
+          const dx = b[0] - a[0], dy = b[1] - a[1];
+          const len = Math.hypot(dx, dy);
+          if (len === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+          return Math.abs(dy * p[0] - dx * p[1] + b[0] * a[1] - b[1] * a[0]) / len;
+        };
+
+        const rdp = (arr) => {
+          if (arr.length <= 2) return arr;
+          let maxD = 0, idx = 0;
+          const last = arr.length - 1;
+          for (let i = 1; i < last; i++) {
+            const d = perpDist(arr[i], arr[0], arr[last]);
+            if (d > maxD) { maxD = d; idx = i; }
+          }
+          if (maxD > epsilon) {
+            const left = rdp(arr.slice(0, idx + 1));
+            const right = rdp(arr.slice(idx));
+            return left.slice(0, -1).concat(right);
+          }
+          return [arr[0], arr[last]];
+        };
+
+        // Tìm cặp đỉnh xa nhau nhất để tách đôi vòng kín
+        let i1 = 0, i2 = Math.floor(pts.length / 2), maxDist = 0;
+        for (let i = 0; i < pts.length; i++) {
+          for (let j = i + 1; j < pts.length; j++) {
+            const d = Math.hypot(pts[i][0] - pts[j][0], pts[i][1] - pts[j][1]);
+            if (d > maxDist) { maxDist = d; i1 = i; i2 = j; }
+          }
+        }
+        if (i1 > i2) [i1, i2] = [i2, i1];
+        const chain1 = pts.slice(i1, i2 + 1);
+        const chain2 = pts.slice(i2).concat(pts.slice(0, i1 + 1));
+
+        const s1 = rdp(chain1);
+        const s2 = rdp(chain2);
+        return s1.slice(0, -1).concat(s2.slice(0, -1));
+      }
+
+      static polyPerimeter(pts) {
+        let p = 0;
+        for (let i = 0; i < pts.length; i++) {
+          const j = (i + 1) % pts.length;
+          p += Math.hypot(pts[j][0] - pts[i][0], pts[j][1] - pts[i][1]);
+        }
+        return p;
+      }
+
+      static polyArea(pts) {
+        let a = 0;
+        for (let i = 0; i < pts.length; i++) {
+          const j = (i + 1) % pts.length;
+          a += pts[i][0] * pts[j][1] - pts[j][0] * pts[i][1];
+        }
+        return Math.abs(a) * 0.5;
+      }
+
+      /**
+       * Xoay bù góc nghiêng nhỏ trong khoảng [-20°, +20°] giữ nguyên phương đứng/ngang
+       */
+      static deskewUpright(pts) {
+        if (pts.length < 3) return pts;
+        const peri = this.polyPerimeter(pts);
+        const simplified = this.simplifyClosedPoly(pts, Math.max(1.5, 0.015 * peri));
+
+        const angles = [];
+        for (let i = 0; i < simplified.length; i++) {
+          const p1 = simplified[i];
+          const p2 = simplified[(i + 1) % simplified.length];
+          const dx = p2[0] - p1[0];
+          const dy = p2[1] - p1[1];
+          const len = Math.hypot(dx, dy);
+          if (len < 10) continue;
+          const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
+          let dev = ((ang + 45) % 90 + 90) % 90 - 45;
+          if (Math.abs(dev) <= 20) {
+            angles.push([dev, len]);
+          }
+        }
+
+        if (!angles.length) return pts;
+        const totalW = angles.reduce((acc, item) => acc + item[1], 0);
+        const tiltDeg = angles.reduce((acc, item) => acc + item[0] * item[1], 0) / Math.max(1e-6, totalW);
+        if (Math.abs(tiltDeg) < 0.35) return pts;
+
+        let cx = 0, cy = 0;
+        for (const p of pts) { cx += p[0]; cy += p[1]; }
+        cx /= pts.length;
+        cy /= pts.length;
+
+        const rad = (-tiltDeg * Math.PI) / 180;
+        const cosA = Math.cos(rad), sinA = Math.sin(rad);
+        return pts.map(([x, y]) => [
+          cx + (x - cx) * cosA - (y - cy) * sinA,
+          cy + (x - cx) * sinA + (y - cy) * cosA
+        ]);
+      }
+
+      /**
+       * Ép các cạnh gần ngang/dọc về chuẩn vuông góc CAD 0°/90° và gộp cạnh thẳng hàng
+       */
+      static snapOrthogonalPolygon(normPts) {
+        let pts = normPts.map(p => [p[0], p[1]]);
+        if (pts.length < 3) return [[0, 1], [1, 1], [1, 0], [0, 0]];
+
+        // Lọc bỏ các đỉnh quá sát nhau
+        const filtered = [pts[0]];
+        for (let i = 1; i < pts.length; i++) {
+          const prev = filtered[filtered.length - 1];
+          if (Math.hypot(pts[i][0] - prev[0], pts[i][1] - prev[1]) >= 0.035) {
+            filtered.push(pts[i]);
+          }
+        }
+        if (filtered.length >= 3 && Math.hypot(filtered[0][0] - filtered[filtered.length - 1][0], filtered[0][1] - filtered[filtered.length - 1][1]) < 0.035) {
+          filtered.pop();
+        }
+        pts = filtered;
+
+        const getEdgeDirs = (poly) => {
+          const dirs = [];
+          const m = poly.length;
+          for (let i = 0; i < m; i++) {
+            const p1 = poly[i], p2 = poly[(i + 1) % m];
+            let ang = Math.abs((Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180) / Math.PI);
+            if (ang > 90) ang = 180 - ang;
+            if (ang <= 25) dirs.push("H");
+            else if (ang >= 65) dirs.push("V");
+            else dirs.push("D");
+          }
+          return dirs;
+        };
+
+        // Gộp các cạnh H hoặc V cùng phương liên tiếp
+        while (pts.length >= 4) {
+          const dirs = getEdgeDirs(pts);
+          const m = pts.length;
+          let dropIdx = -1;
+          for (let i = 0; i < m; i++) {
+            const prevDir = dirs[(i - 1 + m) % m];
+            if (prevDir === dirs[i] && (dirs[i] === "H" || dirs[i] === "V")) {
+              dropIdx = i;
+              break;
+            }
+          }
+          if (dropIdx !== -1) pts.splice(dropIdx, 1);
+          else break;
+        }
+
+        if (pts.length < 3) return [[0, 1], [1, 1], [1, 0], [0, 0]];
+
+        // Căn thẳng tọa độ X và Y
+        for (let iter = 0; iter < 2; iter++) {
+          const dirs = getEdgeDirs(pts);
+          const m = pts.length;
+          for (let i = 0; i < m; i++) {
+            const j = (i + 1) % m;
+            if (dirs[i] === "H") {
+              const ay = 0.5 * (pts[i][1] + pts[j][1]);
+              pts[i][1] = ay;
+              pts[j][1] = ay;
+            } else if (dirs[i] === "V") {
+              const ax = 0.5 * (pts[i][0] + pts[j][0]);
+              pts[i][0] = ax;
+              pts[j][0] = ax;
+            }
+          }
+        }
+
+        const xs = pts.map(p => p[0]);
+        const ys = pts.map(p => p[1]);
+        const minX = Math.min(...xs), maxX = Math.max(...xs);
+        const minY = Math.min(...ys), maxY = Math.max(...ys);
+        const sx = Math.max(1e-5, maxX - minX);
+        const sy = Math.max(1e-5, maxY - minY);
+        return pts.map(p => [(p[0] - minX) / sx, (p[1] - minY) / sy]);
+      }
+
+      /**
+       * Tìm các lỗ tròn bên trong vật thể từ mặt nạ nhị phân
+       */
+      static detectInnerCircles(compMask, w, h, bbox) {
+        const bw = Math.max(1, bbox.maxX - bbox.minX);
+        const bh = Math.max(1, bbox.maxY - bbox.minY);
+        const boxArea = bw * bh;
+        const inv = new Uint8Array(w * h);
+
+        // Chỉ xét vùng nền nằm bên trong bounding box vật thể
+        for (let y = bbox.minY + 2; y <= bbox.maxY - 2; y++) {
+          for (let x = bbox.minX + 2; x <= bbox.maxX - 2; x++) {
+            const idx = y * w + x;
+            if (compMask[idx] === 0) inv[idx] = 1;
+          }
+        }
+
+        const visited = new Uint8Array(w * h);
+        const queue = new Int32Array(w * h);
+        const circles = [];
+
+        for (let y = bbox.minY + 2; y <= bbox.maxY - 2; y++) {
+          for (let x = bbox.minX + 2; x <= bbox.maxX - 2; x++) {
+            const start = y * w + x;
+            if (inv[start] === 1 && visited[start] === 0) {
+              let head = 0, tail = 0;
+              queue[tail++] = start;
+              visited[start] = 1;
+
+              let minX = x, maxX = x, minY = y, maxY = y;
+              let area = 0, sumX = 0, sumY = 0;
+              let touchesBBox = false;
+
+              while (head < tail) {
+                const cur = queue[head++];
+                area++;
+                const cx = cur % w;
+                const cy = (cur - cx) / w;
+                sumX += cx;
+                sumY += cy;
+                if (cx < minX) minX = cx;
+                if (cx > maxX) maxX = cx;
+                if (cy < minY) minY = cy;
+                if (cy > maxY) maxY = cy;
+                if (cx <= bbox.minX + 2 || cx >= bbox.maxX - 2 || cy <= bbox.minY + 2 || cy >= bbox.maxY - 2) {
+                  touchesBBox = true;
+                }
+
+                if (cx > 0 && inv[cur - 1] && !visited[cur - 1]) { visited[cur - 1] = 1; queue[tail++] = cur - 1; }
+                if (cx + 1 < w && inv[cur + 1] && !visited[cur + 1]) { visited[cur + 1] = 1; queue[tail++] = cur + 1; }
+                if (cy > 0 && inv[cur - w] && !visited[cur - w]) { visited[cur - w] = 1; queue[tail++] = cur - w; }
+                if (cy + 1 < h && inv[cur + w] && !visited[cur + w]) { visited[cur + w] = 1; queue[tail++] = cur + w; }
+              }
+
+              if (touchesBBox) continue;
+              if (area < boxArea * 0.012 || area > boxArea * 0.65) continue;
+
+              const cw = maxX - minX + 1;
+              const ch = maxY - minY + 1;
+              const aspect = cw / Math.max(1, ch);
+              const fillRatio = area / (Math.PI * (cw / 2) * (ch / 2));
+
+              if (aspect >= 0.78 && aspect <= 1.28 && fillRatio >= 0.78 && fillRatio <= 1.22) {
+                const centerX = sumX / area;
+                const centerY = sumY / area;
+                const radiusPx = (cw + ch) / 4;
+                const nx = (centerX - bbox.minX) / bw;
+                const ny = 1.0 - (centerY - bbox.minY) / bh;
+                if (!circles.some(c => Math.hypot(nx - c[0], ny - c[1]) < 0.06)) {
+                  circles.push([nx, ny, radiusPx / bw, radiusPx / bh, centerX, centerY, radiusPx]);
+                }
+              }
+            }
+          }
+        }
+        return circles;
+      }
+
+      /**
+       * Hàm chính trích xuất hình học từ phần tử HTMLImageElement (max 420px)
+       */
+      static extractGeometry(imgElement, shapeHint = "AUTO") {
+        if (!imgElement) return null;
+
+        const maxSide = 420;
+        let w = imgElement.naturalWidth || imgElement.width;
+        let h = imgElement.naturalHeight || imgElement.height;
+        if (!w || !h) return null;
+
+        if (Math.max(w, h) > maxSide) {
+          const ratio = maxSide / Math.max(w, h);
+          w = Math.max(16, Math.round(w * ratio));
+          h = Math.max(16, Math.round(h * ratio));
+        }
+
+        const offCanvas = document.createElement("canvas");
+        offCanvas.width = w;
+        offCanvas.height = h;
+        const ctx = offCanvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(imgElement, 0, 0, w, h);
+
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const data = imgData.data;
+        const nPixels = w * h;
+
+        // Tính CIE Lab và độ sáng cho từng pixel
+        const L_arr = new Float32Array(nPixels);
+        const a_arr = new Float32Array(nPixels);
+        const b_arr = new Float32Array(nPixels);
+        const g_arr = new Float32Array(nPixels);
+
+        for (let i = 0; i < nPixels; i++) {
+          const idx = i * 4;
+          const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+          const [L, a, bb] = this.rgbToLab(r, g, b);
+          L_arr[i] = L;
+          a_arr[i] = a;
+          b_arr[i] = bb;
+          g_arr[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+        }
+
+        // Lấy mẫu viền ảnh để xác định màu nền trung vị (Median Background)
+        const border = Math.max(6, Math.floor(Math.min(w, h) / 16));
+        const bL = [], ba = [], bb = [], bg = [];
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            if (x < border || x >= w - border || y < border || y >= h - border) {
+              const p = y * w + x;
+              bL.push(L_arr[p]);
+              ba.push(a_arr[p]);
+              bb.push(b_arr[p]);
+              bg.push(g_arr[p]);
+            }
+          }
+        }
+        const median = (arr) => {
+          arr.sort((x, y) => x - y);
+          return arr[Math.floor(arr.length / 2)] || 0;
+        };
+        const medL = median(bL), medA = median(ba), medB = median(bb), medG = median(bg);
+
+        // Khoảng cách màu CIE Lab & Grayscale so với nền
+        const deltaE = new Float32Array(nPixels);
+        const deltaG = new Float32Array(nPixels);
+        let maxDE = 1e-5, maxDG = 1e-5;
+        for (let i = 0; i < nPixels; i++) {
+          const de = Math.hypot(L_arr[i] - medL, a_arr[i] - medA, b_arr[i] - medB);
+          const dg = Math.abs(g_arr[i] - medG);
+          deltaE[i] = de;
+          deltaG[i] = dg;
+          if (de > maxDE) maxDE = de;
+          if (dg > maxDG) maxDG = dg;
+        }
+
+        const u8DE = new Uint8Array(nPixels);
+        const u8DG = new Uint8Array(nPixels);
+        for (let i = 0; i < nPixels; i++) {
+          u8DE[i] = Math.min(255, Math.round((deltaE[i] / maxDE) * 255));
+          u8DG[i] = Math.min(255, Math.round((deltaG[i] / maxDG) * 255));
+        }
+
+        const thDE = this.otsuThreshold(u8DE);
+        const thDG = this.otsuThreshold(u8DG);
+
+        const rawMaskLab = new Uint8Array(nPixels);
+        const rawMaskGray = new Uint8Array(nPixels);
+        for (let i = 0; i < nPixels; i++) {
+          rawMaskLab[i] = u8DE[i] > thDE ? 1 : 0;
+          rawMaskGray[i] = u8DG[i] > thDG ? 1 : 0;
+        }
+
+        const cleanLab = this.morphCloseOpen(rawMaskLab, w, h);
+        const cleanGray = this.morphCloseOpen(rawMaskGray, w, h);
+
+        const compLab = this.findMainComponent(cleanLab, w, h);
+        const compGray = this.findMainComponent(cleanGray, w, h);
+
+        let mainComp = compLab;
+        if (!mainComp || (compGray && compGray.bbox.area > compLab.bbox.area * 1.15 && compGray.bbox.area < nPixels * 0.88)) {
+          mainComp = compGray;
+        }
+        if (!mainComp || mainComp.boundary.length < 4) return null;
+
+        // Dùng Convex Hull để loại bỏ lõm giả do bóng đổ (trừ khi chọn POLY)
+        const hullPts = this.convexHull(mainComp.boundary);
+        const targetPts = shapeHint === "POLY" ? hullPts : hullPts;
+        const deskewed = this.deskewUpright(targetPts);
+
+        const xs = deskewed.map(p => p[0]);
+        const ys = deskewed.map(p => p[1]);
+        const xmin = Math.min(...xs), xmax = Math.max(...xs);
+        const ymin = Math.min(...ys), ymax = Math.max(...ys);
+        const bw = Math.max(1, xmax - xmin);
+        const bh = Math.max(1, ymax - ymin);
+        let aspectWH = bw / bh;
+
+        const areaHull = this.polyArea(deskewed);
+        const periHull = this.polyPerimeter(deskewed);
+        const circularity = (4 * Math.PI * areaHull) / Math.max(1e-6, periHull * periHull);
+        const rectangularity = areaHull / Math.max(1, bw * bh);
+
+        const polylines = [];
+        const circles = [];
+
+        if (shapeHint === "CIRCLE" || (shapeHint === "AUTO" && circularity >= 0.85)) {
+          circles.push([0.5, 0.5, 0.5, 0.5]);
+          aspectWH = 1.0;
+        } else if (shapeHint === "RECT" || (shapeHint === "AUTO" && rectangularity >= 0.80)) {
+          polylines.push([[0, 1], [1, 1], [1, 0], [0, 0]]);
+        } else {
+          const safeEps = Math.max(1.5, Math.min(0.016 * periHull, 0.14 * Math.min(bw, bh)));
+          const approx = this.simplifyClosedPoly(deskewed, safeEps);
+          const normPts = approx.map(([px, py]) => [(px - xmin) / bw, 1.0 - (py - ymin) / bh]);
+          polylines.push(this.snapOrthogonalPolygon(normPts));
+        }
+
+        // Tìm lỗ tròn bên trong vật thể
+        const innerCircles = this.detectInnerCircles(mainComp.compMask, w, h, mainComp.bbox);
+        for (const ic of innerCircles) {
+          circles.push([ic[0], ic[1], ic[2], ic[3]]);
+        }
+
+        // Vẽ đường viền nhận diện màu xanh lên canvas preview để người dùng kiểm tra
+        ctx.strokeStyle = "#10B981";
+        ctx.lineWidth = Math.max(2, Math.round(Math.max(w, h) / 140));
+        ctx.strokeRect(
+          mainComp.bbox.minX,
+          mainComp.bbox.minY,
+          mainComp.bbox.maxX - mainComp.bbox.minX,
+          mainComp.bbox.maxY - mainComp.bbox.minY
+        );
+
+        ctx.strokeStyle = "#3B82F6";
+        for (const ic of innerCircles) {
+          ctx.beginPath();
+          ctx.arc(ic[4], ic[5], ic[6], 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        return {
+          polylines,
+          circles,
+          aspectWH,
+          previewCanvas: offCanvas
+        };
+      }
+    }
+
+    /* =========================================================================
+       3. TRÌNH XUẤT FILE AUTOCAD DXF R2010 CHUẨN TCVN (ASCII DXF THUẦN JS)
+       ========================================================================= */
+    class TCVNDxfExporter {
+      static sanitizeAscii(str) {
+        if (!str) return "";
+        return str
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/đ/g, "d")
+          .replace(/Đ/g, "D")
+          .replace(/[^\x20-\x7E]/g, "");
+      }
+
+      static export(docModel) {
+        const lines = [];
+        const add = (code, val) => {
+          lines.push(String(code).trim());
+          lines.push(String(val));
+        };
+
+        // HEADER SECTION
+        add(0, "SECTION");
+        add(2, "HEADER");
+        add(9, "$ACADVER"); add(1, "AC1024");
+        add(9, "$INSUNITS"); add(70, 4); // 4 = Millimeters
+        add(9, "$LTSCALE"); add(40, 1.0);
+        add(0, "ENDSEC");
+
+        // TABLES SECTION (LTYPES & LAYERS)
+        add(0, "SECTION");
+        add(2, "TABLES");
+
+        // LTYPE table
+        add(0, "TABLE");
+        add(2, "LTYPE");
+        add(70, 3);
+
+        add(0, "LTYPE"); add(2, "CONTINUOUS"); add(70, 0); add(3, "Solid line"); add(72, 65); add(73, 0); add(40, 0.0);
+        add(0, "LTYPE"); add(2, "DASHED"); add(70, 0); add(3, "__ __ __"); add(72, 65); add(73, 2); add(40, 3.0); add(49, 2.0); add(49, -1.0);
+        add(0, "LTYPE"); add(2, "CENTER"); add(70, 0); add(3, "____ _ ____"); add(72, 65); add(73, 4); add(40, 6.5); add(49, 4.0); add(49, -1.0); add(49, 0.5); add(49, -1.0);
+        add(0, "ENDTAB");
+
+        // LAYER table
+        const layerKeys = Object.keys(CadDocument.LAYERS);
+        add(0, "TABLE");
+        add(2, "LAYER");
+        add(70, layerKeys.length);
+        for (const key of layerKeys) {
+          const spec = CadDocument.LAYERS[key];
+          add(0, "LAYER");
+          add(2, key);
+          add(70, 0);
+          add(62, spec.dxfColor);
+          add(6, spec.dxfLinetype);
+          add(370, spec.lineweight);
+        }
+        add(0, "ENDTAB");
+        add(0, "ENDSEC");
+
+        // ENTITIES SECTION
+        add(0, "SECTION");
+        add(2, "ENTITIES");
+
+        const dxfLine = (p1, p2, layer) => {
+          add(0, "LINE");
+          add(8, layer);
+          add(10, p1[0].toFixed(3)); add(20, p1[1].toFixed(3)); add(30, "0.0");
+          add(11, p2[0].toFixed(3)); add(21, p2[1].toFixed(3)); add(31, "0.0");
+        };
+
+        const dxfRect = (x1, y1, x2, y2, layer) => {
+          dxfLine([x1, y1], [x2, y1], layer);
+          dxfLine([x2, y1], [x2, y2], layer);
+          dxfLine([x2, y2], [x1, y2], layer);
+          dxfLine([x1, y2], [x1, y1], layer);
+        };
+
+        const dxfCircle = (cx, cy, r, layer) => {
+          add(0, "CIRCLE");
+          add(8, layer);
+          add(10, cx.toFixed(3)); add(20, cy.toFixed(3)); add(30, "0.0");
+          add(40, r.toFixed(3));
+        };
+
+        const dxfText = (text, x, y, height, layer, hAlign = 0, vAlign = 2) => {
+          const clean = this.sanitizeAscii(text);
+          if (!clean) return;
+          add(0, "TEXT");
+          add(8, layer);
+          add(10, x.toFixed(3)); add(20, y.toFixed(3)); add(30, "0.0");
+          add(40, height.toFixed(2));
+          add(1, clean);
+          add(72, hAlign);
+          add(73, vAlign);
+          add(11, x.toFixed(3)); add(21, y.toFixed(3)); add(31, "0.0");
+        };
+
+        // 1. Khổ giấy A4 ngang (297 x 210 mm) & Khung bản vẽ TCVN 7285:2003
+        const W = 297.0, H = 210.0;
+        dxfRect(0, 0, W, H, "NET_LIEN_MANH");
+        dxfRect(20, 10, W - 10, H - 10, "NET_LIEN_DAM");
+
+        // 2. Khung tên TCVN 3821-83 (140 x 32 mm ở góc phải dưới)
+        const tx = W - 10.0 - 140.0;
+        const ty = 10.0;
+        dxfRect(tx, ty, tx + 140, ty + 32, "NET_LIEN_DAM");
+        dxfLine([tx, ty + 16], [tx + 140, ty + 16], "NET_LIEN_MANH");
+        dxfLine([tx + 65, ty], [tx + 65, ty + 32], "NET_LIEN_MANH");
+        dxfLine([tx + 115, ty], [tx + 115, ty + 16], "NET_LIEN_MANH");
+        dxfLine([tx, ty + 8], [tx + 65, ty + 8], "NET_LIEN_MANH");
+
+        if (docModel.meta.author) {
+          dxfText(`Ve: ${docModel.meta.author}`, tx + 3, ty + 24, 2.6, "NET_LIEN_MANH", 0, 2);
+        }
+        if (docModel.meta.checker) {
+          dxfText(`K.tra: ${docModel.meta.checker}`, tx + 3, ty + 12, 2.6, "NET_LIEN_MANH", 0, 2);
+        }
+        if (docModel.meta.org_name) {
+          dxfText(docModel.meta.org_name, tx + 32.5, ty + 4, 2.8, "NET_LIEN_DAM", 1, 2);
+        }
+        dxfText(docModel.meta.part_name || "BAN VE CHI TIET", tx + 102.5, ty + 24, 4.2, "NET_LIEN_DAM", 1, 2);
+        if (docModel.meta.material) {
+          dxfText(`Vat lieu: ${docModel.meta.material}`, tx + 90, ty + 8, 2.6, "NET_LIEN_MANH", 1, 2);
+        }
+        dxfText(`Ti le ${docModel.meta.scale_label}`, tx + 127.5, ty + 8, 2.6, "NET_LIEN_MANH", 1, 2);
+
+        // 3. Yêu cầu kỹ thuật phía trên khung tên
+        const reqLines = (docModel.meta.req_text || "").split("\n").map(s => s.trim()).filter(Boolean);
+        if (reqLines.length > 0) {
+          const baseY = ty + 36 + reqLines.length * 4.5;
+          dxfText("YEU CAU KY THUAT:", tx, baseY, 2.8, "NET_LIEN_DAM", 0, 1);
+          reqLines.forEach((line, idx) => {
+            dxfText(line, tx, baseY - (idx + 1) * 4.5, 2.5, "NET_LIEN_MANH", 0, 1);
+          });
+        }
+
+        // 4. Toàn bộ đối tượng hình học & ghi kích thước
+        for (const ent of docModel.entities) {
+          const layer = ent.layer || "NET_LIEN_DAM";
+          if (ent.type === "LINE") {
+            dxfLine(ent.p1, ent.p2, layer);
+          } else if (ent.type === "CIRCLE") {
+            dxfCircle(ent.center[0], ent.center[1], ent.radius, layer);
+          } else if (ent.type === "DIM") {
+            const [p1, p2, offset] = [ent.p1, ent.p2, ent.offset];
+            const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+            const L = Math.hypot(dx, dy);
+            if (L < 0.1) continue;
+            const nx = -dy / L, ny = dx / L;
+            const sign = offset >= 0 ? 1 : -1;
+
+            const q1 = [p1[0] + offset * nx, p1[1] + offset * ny];
+            const q2 = [p2[0] + offset * nx, p2[1] + offset * ny];
+
+            // Đường gióng
+            dxfLine([p1[0] + sign * nx, p1[1] + sign * ny], [q1[0] + 2 * sign * nx, q1[1] + 2 * sign * ny], layer);
+            dxfLine([p2[0] + sign * nx, p2[1] + sign * ny], [q2[0] + 2 * sign * nx, q2[1] + 2 * sign * ny], layer);
+
+            // Đường kích thước chính
+            dxfLine(q1, q2, layer);
+
+            // Mũi tên 2 đầu
+            const ux = dx / L, uy = dy / L;
+            const aLen = 2.2, aWid = 0.7;
+            dxfLine(q1, [q1[0] + aLen * ux + aWid * nx, q1[1] + aLen * uy + aWid * ny], layer);
+            dxfLine(q1, [q1[0] + aLen * ux - aWid * nx, q1[1] + aLen * uy - aWid * ny], layer);
+            dxfLine(q2, [q2[0] - aLen * ux + aWid * nx, q2[1] - aLen * uy + aWid * ny], layer);
+            dxfLine(q2, [q2[0] - aLen * ux - aWid * nx, q2[1] - aLen * uy - aWid * ny], layer);
+
+            // Chữ số kích thước
+            const mx = (q1[0] + q2[0]) / 2 + 2.4 * sign * nx;
+            const my = (q1[1] + q2[1]) / 2 + 2.4 * sign * ny;
+            dxfText(ent.text, mx, my, 3.0, layer, 1, 2);
+          }
+        }
+
+        add(0, "ENDSEC");
+        add(0, "EOF");
+        return lines.join("\r\n");
+      }
+    }
+
+    /* =========================================================================
+       4. BỘ ĐIỀU KHIỂN ỨNG DỤNG & TRÌNH BIÊN TẬP CAD 2D (HARDWARE-ACCELERATED)
+       ========================================================================= */
+    const App = {
+      doc: new CadDocument(),
+      images: { front: null, top: null, left: null },
+      currentUploadTarget: null,
+
+      // Tham số Viewport A4 (297 x 210 mm)
+      viewScale: 2.8,
+      viewOx: 30,
+      viewOy: 20,
+      isPanning: false,
+      spaceDown: false,
+      panStart: null,
+
+      // Trạng thái công cụ vẽ
+      activeTool: "SELECT",
+      orthoMode: true,
+      selectedId: null,
+      editingDimId: null,
+      draftP1: null,
+      currentSnap: null,
+      lastMouseMm: [0, 0],
+
+      // Trạng thái Camera WebRTC
+      cameraTargetView: "front",
+      cameraStream: null,
+      cameraAnimId: null,
+      cameraEdgePreview: false,
+
+      init() {
+        this.canvas = document.getElementById("cadCanvas");
+        this.ctx = this.canvas.getContext("2d");
+        this.wrapper = document.getElementById("canvasWrapper");
+
+        this.bindEvents();
+        this.resizeCanvas();
+        this.fitSheetToViewport();
+      },
+
+      showToast(message, type = "info") {
+        const container = document.getElementById("toastContainer");
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = "0";
+          toast.style.transition = "opacity 0.2s";
+          setTimeout(() => toast.remove(), 220);
+        }, 3200);
+      },
+
+      bindEvents() {
+        // Resize observer cho Canvas sắc nét trên mọi màn hình
+        window.addEventListener("resize", () => this.resizeCanvas());
+
+        // Tải ảnh từ máy tính
+        const fileInput = document.getElementById("hiddenFileInput");
+        fileInput.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (!file || !this.currentUploadTarget) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+              this.setViewImage(this.currentUploadTarget, img, file.name);
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+          fileInput.value = "";
+        });
+
+        // Các nút hành động chính
+        document.getElementById("btnEstimateHD").addEventListener("click", () => this.estimateHDFromImages());
+        document.getElementById("btnGenerateCad").addEventListener("click", () => this.generateCadViews());
+        document.getElementById("btnExportDxf").addEventListener("click", () => this.exportDxf());
+        document.getElementById("btnExportPng").addEventListener("click", () => this.exportPng());
+
+        // Ribbon công cụ
+        document.querySelectorAll("#toolButtonGroup .tool-btn").forEach(btn => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll("#toolButtonGroup .tool-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            this.activeTool = btn.dataset.tool;
+            this.draftP1 = null;
+            this.redraw();
+          });
+        });
+
+        document.getElementById("chkOrtho").addEventListener("change", (e) => {
+          this.orthoMode = e.target.checked;
+          this.updateStatusBar();
+        });
+
+        document.getElementById("btnDeleteSel").addEventListener("click", () => this.deleteSelected());
+        document.getElementById("btnUndo").addEventListener("click", () => this.undo());
+        document.getElementById("btnRedo").addEventListener("click", () => this.redo());
+        document.getElementById("btnFitView").addEventListener("click", () => this.fitSheetToViewport());
+
+        // Modals
+        document.getElementById("btnOpenTitleModal").addEventListener("click", () => this.openTitleBlockModal());
+        document.getElementById("btnSaveTitleBlock").addEventListener("click", () => this.saveTitleBlock());
+        document.getElementById("btnSaveDimValue").addEventListener("click", () => this.saveDimValue());
+
+        // Camera modal controls
+        document.getElementById("btnToggleEdgePreview").addEventListener("click", () => {
+          this.cameraEdgePreview = !this.cameraEdgePreview;
+        });
+        document.getElementById("btnSnapCamera").addEventListener("click", () => this.captureFromCamera());
+        document.getElementById("cameraSelect").addEventListener("change", (e) => {
+          if (this.cameraStream) this.startCameraStream(e.target.value);
+        });
+
+        // Tương tác chuột & chạm trên Canvas CAD
+        this.canvas.addEventListener("mousemove", (e) => this.onPointerMove(e));
+        this.canvas.addEventListener("mousedown", (e) => this.onPointerDown(e));
+        window.addEventListener("mouseup", () => { this.isPanning = false; });
+        this.canvas.addEventListener("dblclick", (e) => this.onDoubleClick(e));
+        this.canvas.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          this.cancelAction();
+        });
+        this.canvas.addEventListener("wheel", (e) => this.onWheel(e), { passive: false });
+
+        // Hỗ trợ chạm cảm ứng (bảng tương tác / tablet)
+        this.canvas.addEventListener("touchstart", (e) => {
+          if (e.touches.length === 1) {
+            const t = e.touches[0];
+            this.onPointerDown({ clientX: t.clientX, clientY: t.clientY, button: 0 });
+          }
+        }, { passive: true });
+        this.canvas.addEventListener("touchmove", (e) => {
+          if (e.touches.length === 1) {
+            const t = e.touches[0];
+            this.onPointerMove({ clientX: t.clientX, clientY: t.clientY });
+          }
+        }, { passive: true });
+
+        // Phím tắt toàn cục
+        window.addEventListener("keydown", (e) => {
+          const tag = document.activeElement.tagName;
+          const isInput = (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT");
+
+          if (document.getElementById("cameraModal").classList.contains("open")) {
+            if (e.code === "Space") { e.preventDefault(); this.captureFromCamera(); }
+            else if (e.key === "e" || e.key === "E") { this.cameraEdgePreview = !this.cameraEdgePreview; }
+            else if (e.key === "Escape") { this.closeCameraModal(); }
+            return;
+          }
+
+          if (e.code === "Space" && !isInput) {
+            this.spaceDown = true;
+            this.canvas.style.cursor = "grab";
+          }
+          if (isInput) return;
+
+          if (e.key === "Delete" || e.key === "Backspace") {
+            e.preventDefault();
+            this.deleteSelected();
+          } else if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
+            e.preventDefault();
+            this.undo();
+          } else if ((e.ctrlKey || e.metaKey) && (e.key === "y" || e.key === "Y")) {
+            e.preventDefault();
+            this.redo();
+          } else if (e.key === "F8") {
+            e.preventDefault();
+            this.orthoMode = !this.orthoMode;
+            document.getElementById("chkOrtho").checked = this.orthoMode;
+            this.updateStatusBar();
+          } else if (e.key === "Escape") {
+            this.cancelAction();
+          }
+        });
+
+        window.addEventListener("keyup", (e) => {
+          if (e.code === "Space") {
+            this.spaceDown = false;
+            this.canvas.style.cursor = "crosshair";
+          }
+        });
+      },
+
+      /* -----------------------------------------------------------------------
+         THU NHẬN ẢNH & CAMERA WEBRTC
+         ----------------------------------------------------------------------- */
+      triggerFileUpload(viewKey) {
+        this.currentUploadTarget = viewKey;
+        document.getElementById("hiddenFileInput").click();
+      },
+
+      setViewImage(viewKey, imgElement, labelName = "Ảnh đã chụp") {
+        this.images[viewKey] = imgElement;
+        const st = document.getElementById(`status_${viewKey}`);
+        st.textContent = `✔ ${labelName}`;
+        st.classList.add("loaded");
+
+        const thumbBox = document.getElementById(`thumbBox_${viewKey}`);
+        thumbBox.innerHTML = "";
+        const c = document.createElement("canvas");
+        c.width = 136;
+        c.height = 100;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(imgElement, 0, 0, c.width, c.height);
+        thumbBox.appendChild(c);
+      },
+
+      updateThumbPreviewCanvas(viewKey, previewCanvas) {
+        if (!previewCanvas) return;
+        const thumbBox = document.getElementById(`thumbBox_${viewKey}`);
+        thumbBox.innerHTML = "";
+        const c = document.createElement("canvas");
+        c.width = 136;
+        c.height = 100;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(previewCanvas, 0, 0, c.width, c.height);
+        thumbBox.appendChild(c);
+      },
+
+      async openCameraModal(viewKey) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          this.showToast("Trình duyệt không hỗ trợ Camera trực tiếp. Hãy dùng nút 'Tải ảnh'.", "warn");
+          return;
+        }
+        this.cameraTargetView = viewKey;
+        this.cameraEdgePreview = false;
+
+        const titles = {
+          front: "📷 Hướng 1: Chính diện → Hình chiếu đứng",
+          top:   "📷 Hướng 2: Từ trên xuống → Hình chiếu bằng",
+          left:  "📷 Hướng 3: Từ bên cạnh → Hình chiếu cạnh"
+        };
+        document.getElementById("cameraModalTitle").textContent = titles[viewKey] || "📷 Chụp ảnh";
+        document.getElementById("cameraModal").classList.add("open");
+
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevs = devices.filter(d => d.kind === "videoinput");
+          const sel = document.getElementById("cameraSelect");
+          sel.innerHTML = "";
+          videoDevs.forEach((dev, idx) => {
+            const opt = document.createElement("option");
+            opt.value = dev.deviceId;
+            opt.textContent = dev.label || `Camera #${idx + 1}`;
+            sel.appendChild(opt);
+          });
+          await this.startCameraStream(videoDevs[0]?.deviceId);
+        } catch (err) {
+          this.showToast("Không thể truy cập Camera. Hãy kiểm tra quyền trình duyệt hoặc dùng 'Tải ảnh'.", "error");
+          this.closeCameraModal();
+        }
+      },
+
+      async startCameraStream(deviceId) {
+        if (this.cameraStream) {
+          this.cameraStream.getTracks().forEach(t => t.stop());
+        }
+        const constraints = {
+          video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { width: { ideal: 1280 } },
+          audio: false
+        };
+        this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        const video = document.getElementById("cameraVideo");
+        video.srcObject = this.cameraStream;
+        await video.play();
+        this.renderCameraLoop();
+      },
+
+      renderCameraLoop() {
+        const video = document.getElementById("cameraVideo");
+        const canvas = document.getElementById("cameraOverlayCanvas");
+        if (!this.cameraStream || !document.getElementById("cameraModal").classList.contains("open")) return;
+
+        const w = video.videoWidth || 640;
+        const h = video.videoHeight || 480;
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(video, 0, 0, w, h);
+
+        const bw = Math.round(w * 0.58);
+        const bh = Math.round(h * 0.58);
+        const x1 = Math.round((w - bw) / 2);
+        const y1 = Math.round((h - bh) / 2);
+
+        // Chế độ xem trước biên nét Sobel thời gian thực [E]
+        if (this.cameraEdgePreview && bw > 20 && bh > 20) {
+          const roi = ctx.getImageData(x1, y1, bw, bh);
+          const d = roi.data;
+          const gray = new Uint8Array(bw * bh);
+          for (let i = 0; i < bw * bh; i++) {
+            gray[i] = (d[i * 4] * 77 + d[i * 4 + 1] * 150 + d[i * 4 + 2] * 29) >> 8;
+          }
+          for (let y = 1; y < bh - 1; y++) {
+            for (let x = 1; x < bw - 1; x++) {
+              const p = y * bw + x;
+              const gx = -gray[p - bw - 1] + gray[p - bw + 1] - 2 * gray[p - 1] + 2 * gray[p + 1] - gray[p + bw - 1] + gray[p + bw + 1];
+              const gy = -gray[p - bw - 1] - 2 * gray[p - bw] - gray[p - bw + 1] + gray[p + bw - 1] + 2 * gray[p + bw] + gray[p + bw + 1];
+              const mag = Math.min(255, (Math.abs(gx) + Math.abs(gy)) >> 1);
+              const idx = p * 4;
+              d[idx] = mag; d[idx + 1] = mag; d[idx + 2] = mag;
+            }
+          }
+          ctx.putImageData(roi, x1, y1);
+        }
+
+        // Làm tối vùng ngoài khung xanh
+        ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+        ctx.fillRect(0, 0, w, y1);
+        ctx.fillRect(0, y1 + bh, w, h - (y1 + bh));
+        ctx.fillRect(0, y1, x1, bh);
+        ctx.fillRect(x1 + bw, y1, w - (x1 + bw), bh);
+
+        // Khung định vị xanh & đường tâm chữ thập
+        ctx.strokeStyle = "#10B981";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x1, y1, bw, bh);
+
+        ctx.strokeStyle = "#F59E0B";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(w / 2, y1 - 12); ctx.lineTo(w / 2, y1 + bh + 12);
+        ctx.moveTo(x1 - 12, h / 2); ctx.lineTo(x1 + bw + 12, h / 2);
+        ctx.stroke();
+
+        this.cameraAnimId = requestAnimationFrame(() => this.renderCameraLoop());
+      },
+
+      captureFromCamera() {
+        const video = document.getElementById("cameraVideo");
+        if (!video || !video.videoWidth) return;
+
+        const w = video.videoWidth;
+        const h = video.videoHeight;
+        const bw = Math.round(w * 0.62);
+        const bh = Math.round(h * 0.62);
+        const x1 = Math.round((w - bw) / 2);
+        const y1 = Math.round((h - bh) / 2);
+
+        const cropCanvas = document.createElement("canvas");
+        cropCanvas.width = bw;
+        cropCanvas.height = bh;
+        cropCanvas.getContext("2d").drawImage(video, x1, y1, bw, bh, 0, 0, bw, bh);
+
+        const img = new Image();
+        img.onload = () => {
+          this.setViewImage(this.cameraTargetView, img, `Camera_${this.cameraTargetView}.png`);
+          this.closeCameraModal();
+          this.showToast("Đã chụp ảnh hướng chiếu thành công!");
+        };
+        img.src = cropCanvas.toDataURL("image/png");
+      },
+
+      closeCameraModal() {
+        if (this.cameraAnimId) cancelAnimationFrame(this.cameraAnimId);
+        if (this.cameraStream) {
+          this.cameraStream.getTracks().forEach(t => t.stop());
+          this.cameraStream = null;
+        }
+        document.getElementById("cameraModal").classList.remove("open");
+      },
+
+      /* -----------------------------------------------------------------------
+         ƯỚC TÍNH KÍCH THƯỚC & TỰ ĐỘNG TẠO 3 HÌNH CHIẾU CHUẨN TCVN
+         ----------------------------------------------------------------------- */
+      estimateHDFromImages() {
+        const W = parseFloat(document.getElementById("inputW").value);
+        if (isNaN(W) || W <= 0) {
+          this.showToast("Vui lòng nhập giá trị Rộng W (mm) hợp lệ trước.", "warn");
+          return;
+        }
+
+        const featFront = VisionEngine.extractGeometry(this.images.front, document.getElementById("shape_front").value);
+        const featTop = VisionEngine.extractGeometry(this.images.top, document.getElementById("shape_top").value);
+        const featLeft = VisionEngine.extractGeometry(this.images.left, document.getElementById("shape_left").value);
+
+        let updated = false;
+        if (featFront) {
+          const H = (W / featFront.aspectWH).toFixed(1);
+          document.getElementById("inputH").value = H;
+          updated = true;
+        }
+        if (featTop) {
+          const D = (W / featTop.aspectWH).toFixed(1);
+          document.getElementById("inputD").value = D;
+          updated = true;
+        } else if (featLeft && featFront) {
+          const HVal = parseFloat(document.getElementById("inputH").value);
+          const D = (HVal * featLeft.aspectWH).toFixed(1);
+          document.getElementById("inputD").value = D;
+          updated = true;
+        }
+
+        if (updated) {
+          this.showToast("Đã ước tính Cao (H) và Sâu (D) theo tỉ lệ ảnh chụp!");
+        } else {
+          this.showToast("Cần tải ít nhất 1 ảnh để ước tính tỉ lệ kích thước.", "warn");
+        }
+      },
+
+      generateCadViews() {
+        if (!this.images.front && !this.images.top && !this.images.left) {
+          this.showToast("Vui lòng chụp hoặc tải lên ít nhất 1 ảnh vật thể trước.", "warn");
+          return;
+        }
+
+        const W = parseFloat(document.getElementById("inputW").value);
+        const H = parseFloat(document.getElementById("inputH").value);
+        const D = parseFloat(document.getElementById("inputD").value);
+        if ([W, H, D].some(v => isNaN(v) || v <= 0)) {
+          this.showToast("Các kích thước W, H, D phải là số dương (mm).", "error");
+          return;
+        }
+
+        const t0 = performance.now();
+        const featFront = VisionEngine.extractGeometry(this.images.front, document.getElementById("shape_front").value);
+        const featTop = VisionEngine.extractGeometry(this.images.top, document.getElementById("shape_top").value);
+        const featLeft = VisionEngine.extractGeometry(this.images.left, document.getElementById("shape_left").value);
+
+        if (featFront) this.updateThumbPreviewCanvas("front", featFront.previewCanvas);
+        if (featTop) this.updateThumbPreviewCanvas("top", featTop.previewCanvas);
+        if (featLeft) this.updateThumbPreviewCanvas("left", featLeft.previewCanvas);
+
+        this.doc.clear(true);
+        this.selectedId = null;
+
+        // Tự động chọn tỉ lệ chuẩn TCVN 7286:2003 vừa khít khổ giấy A4 ngang
+        const gap = 20.0;
+        const availW = 215.0;
+        const availH = 122.0;
+        const tcvnScales = [
+          [2.0, "2:1"],
+          [1.0, "1:1"],
+          [0.5, "1:2"],
+          [0.2, "1:5"],
+          [0.1, "1:10"],
+          [0.05, "1:20"],
+          [0.02, "1:50"]
+        ];
+
+        let chosenFactor = 0.02, chosenLabel = "1:50";
+        for (const [factor, label] of tcvnScales) {
+          if ((W + D) * factor + gap <= availW && (H + D) * factor + gap <= availH) {
+            chosenFactor = factor;
+            chosenLabel = label;
+            break;
+          }
+        }
+
+        this.doc.meta.scale_factor = chosenFactor;
+        this.doc.meta.scale_label = chosenLabel;
+
+        const wPaper = W * chosenFactor;
+        const hPaper = H * chosenFactor;
+        const dPaper = D * chosenFactor;
+
+        const totalW = wPaper + gap + dPaper;
+        const totalH = hPaper + gap + dPaper;
+        const startX = 28.0 + (242.0 - totalW) / 2.0;
+        const topY = 50.0 + (142.0 - totalH) / 2.0;
+
+        const frontX = Math.max(36.0, startX);
+        const frontY = topY + dPaper + gap;
+        const leftX = frontX + wPaper + gap;
+        const leftY = frontY;
+
+        // 1. Hình chiếu đứng (Chính diện)
+        this.buildViewEntities(featFront, frontX, frontY, wPaper, hPaper);
+        this.doc.addDimension([frontX, frontY], [frontX + wPaper, frontY], -6.0, W.toFixed(1), "NET_LIEN_MANH", false);
+        this.doc.addDimension([frontX, frontY], [frontX, frontY + hPaper], 7.0, H.toFixed(1), "NET_LIEN_MANH", false);
+
+        // 2. Hình chiếu bằng (Từ trên xuống)
+        this.buildViewEntities(featTop, frontX, topY, wPaper, dPaper);
+        this.doc.addDimension([frontX, topY], [frontX, topY + dPaper], 7.0, D.toFixed(1), "NET_LIEN_MANH", false);
+
+        // 3. Hình chiếu cạnh (Bên phải hình chiếu đứng)
+        this.buildViewEntities(featLeft, leftX, leftY, dPaper, hPaper);
+        this.doc.addDimension([leftX, leftY], [leftX + dPaper, leftY], -6.0, D.toFixed(1), "NET_LIEN_MANH", false);
+
+        // 4. Suy luận nét đứt khuất (NET_DUT_MANH) & đường tâm (NET_GACH_CHAM) liên hình chiếu
+        if (featTop && featTop.circles.length) {
+          for (const [nx, ny, nrX, nrY] of featTop.circles) {
+            const rP = ((nrX * wPaper) + (nrY * dPaper)) / 2.0;
+            const cxF = frontX + nx * wPaper;
+            this.doc.addLine([cxF - rP, frontY], [cxF - rP, frontY + hPaper], "NET_DUT_MANH", false);
+            this.doc.addLine([cxF + rP, frontY], [cxF + rP, frontY + hPaper], "NET_DUT_MANH", false);
+            this.doc.addLine([cxF, frontY - 3.0], [cxF, frontY + hPaper + 3.0], "NET_GACH_CHAM", false);
+
+            const cxL = leftX + (1.0 - ny) * dPaper;
+            this.doc.addLine([cxL - rP, leftY], [cxL - rP, leftY + hPaper], "NET_DUT_MANH", false);
+            this.doc.addLine([cxL + rP, leftY], [cxL + rP, leftY + hPaper], "NET_DUT_MANH", false);
+            this.doc.addLine([cxL, leftY - 3.0], [cxL, leftY + hPaper + 3.0], "NET_GACH_CHAM", false);
+          }
+        }
+
+        if (featFront && featFront.circles.length) {
+          for (const [nx, ny, nrX, nrY] of featFront.circles) {
+            const rP = ((nrX * wPaper) + (nrY * hPaper)) / 2.0;
+            const cxT = frontX + nx * wPaper;
+            this.doc.addLine([cxT - rP, topY], [cxT - rP, topY + dPaper], "NET_DUT_MANH", false);
+            this.doc.addLine([cxT + rP, topY], [cxT + rP, topY + dPaper], "NET_DUT_MANH", false);
+            this.doc.addLine([cxT, topY - 3.0], [cxT, topY + dPaper + 3.0], "NET_GACH_CHAM", false);
+
+            const cyL = leftY + ny * hPaper;
+            this.doc.addLine([leftX, cyL - rP], [leftX + dPaper, cyL - rP], "NET_DUT_MANH", false);
+            this.doc.addLine([leftX, cyL + rP], [leftX + dPaper, cyL + rP], "NET_DUT_MANH", false);
+            this.doc.addLine([leftX - 3.0, cyL], [leftX + dPaper + 3.0, cyL], "NET_GACH_CHAM", false);
+          }
+        }
+
+        const dt = Math.round(performance.now() - t0);
+        this.fitSheetToViewport();
+        this.showToast(`Đã dựng xong 3 hình chiếu (Tỉ lệ ${chosenLabel}) trong ${dt}ms!`);
+      },
+
+      buildViewEntities(feat, ox, oy, wMm, hMm) {
+        if (!feat || (!feat.polylines.length && !feat.circles.length)) {
+          const corners = [
+            [ox, oy],
+            [ox + wMm, oy],
+            [ox + wMm, oy + hMm],
+            [ox, oy + hMm]
+          ];
+          for (let i = 0; i < 4; i++) {
+            this.doc.addLine(corners[i], corners[(i + 1) % 4], "NET_LIEN_DAM", false);
+          }
+          return;
+        }
+
+        for (const poly of feat.polylines) {
+          const n = poly.length;
+          for (let i = 0; i < n; i++) {
+            const p1 = [ox + poly[i][0] * wMm, oy + poly[i][1] * hMm];
+            const p2 = [ox + poly[(i + 1) % n][0] * wMm, oy + poly[(i + 1) % n][1] * hMm];
+            this.doc.addLine(p1, p2, "NET_LIEN_DAM", false);
+          }
+        }
+
+        for (const [nx, ny, nrX, nrY] of feat.circles) {
+          const cx = ox + nx * wMm;
+          const cy = oy + ny * hMm;
+          const r = ((nrX * wMm) + (nrY * hMm)) / 2.0;
+          this.doc.addCircle([cx, cy], r, "NET_LIEN_DAM", true, false);
+        }
+      },
+
+      /* -----------------------------------------------------------------------
+         HỆ TỌA ĐỘ VIEWPORT CAD & RENDER 60FPS
+         ----------------------------------------------------------------------- */
+      resizeCanvas() {
+        const rect = this.wrapper.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        this.canvas.width = Math.max(100, Math.round(rect.width * dpr));
+        this.canvas.height = Math.max(100, Math.round(rect.height * dpr));
+        this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this.redraw();
+      },
+
+      cadToScreen(xMm, yMm) {
+        return [
+          this.viewOx + xMm * this.viewScale,
+          this.viewOy + (210.0 - yMm) * this.viewScale
+        ];
+      },
+
+      screenToCad(sx, sy) {
+        return [
+          (sx - this.viewOx) / Math.max(1e-6, this.viewScale),
+          210.0 - (sy - this.viewOy) / Math.max(1e-6, this.viewScale)
+        ];
+      },
+
+      fitSheetToViewport() {
+        const rect = this.wrapper.getBoundingClientRect();
+        const cw = Math.max(200, rect.width);
+        const ch = Math.max(150, rect.height);
+        const scaleX = (cw - 44) / 297.0;
+        const scaleY = (ch - 32) / 210.0;
+        this.viewScale = Math.max(0.8, Math.min(scaleX, scaleY));
+        this.viewOx = (cw - 297.0 * this.viewScale) / 2.0;
+        this.viewOy = (ch - 210.0 * this.viewScale) / 2.0;
+        this.redraw();
+      },
+
+      redraw() {
+        const rect = this.wrapper.getBoundingClientRect();
+        const cw = rect.width;
+        const ch = rect.height;
+        const ctx = this.ctx;
+
+        ctx.clearRect(0, 0, cw, ch);
+
+        const W = 297.0, H = 210.0;
+        const [x0, yBottom] = this.cadToScreen(0, 0);
+        const [x1, yTop] = this.cadToScreen(W, H);
+
+        // Đổ bóng tờ giấy A4 ngang
+        ctx.fillStyle = "#94A3B8";
+        ctx.fillRect(x0 + 6, yTop + 6, x1 - x0, yBottom - yTop);
+
+        // Nền giấy trắng A4
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(x0, yTop, x1 - x0, yBottom - yTop);
+        ctx.strokeStyle = "#1E293B";
+        ctx.lineWidth = 1.4;
+        ctx.strokeRect(x0, yTop, x1 - x0, yBottom - yTop);
+
+        // Lưới tọa độ 10mm
+        ctx.strokeStyle = "#F1F5F9";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let gx = 10; gx < 297; gx += 10) {
+          const [sx] = this.cadToScreen(gx, 0);
+          ctx.moveTo(sx, yTop);
+          ctx.lineTo(sx, yBottom);
+        }
+        for (let gy = 10; gy < 210; gy += 10) {
+          const [, sy] = this.cadToScreen(0, gy);
+          ctx.moveTo(x0, sy);
+          ctx.lineTo(x1, sy);
+        }
+        ctx.stroke();
+
+        // Khung bản vẽ TCVN 7285:2003 (Lề trái 20mm, các lề khác 10mm)
+        const [bx0, byBottom] = this.cadToScreen(20, 10);
+        const [bx1, byTop] = this.cadToScreen(W - 10, H - 10);
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 2.0;
+        ctx.strokeRect(bx0, byTop, bx1 - bx0, byBottom - byTop);
+
+        // Khung tên TCVN 3821-83 (140 x 32 mm góc phải dưới)
+        const tx = W - 10.0 - 140.0;
+        const ty = 10.0;
+        const [tx0, tyBottom] = this.cadToScreen(tx, ty);
+        const [tx1, tyTop] = this.cadToScreen(tx + 140, ty + 32);
+
+        ctx.strokeStyle = "#111827";
+        ctx.lineWidth = 1.8;
+        ctx.strokeRect(tx0, tyTop, tx1 - tx0, tyBottom - tyTop);
+
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        const divLines = [
+          [[tx, ty + 16], [tx + 140, ty + 16]],
+          [[tx + 65, ty], [tx + 65, ty + 32]],
+          [[tx + 115, ty], [tx + 115, ty + 16]],
+          [[tx, ty + 8], [tx + 65, ty + 8]]
+        ];
+        for (const [a, b] of divLines) {
+          const sa = this.cadToScreen(a[0], a[1]);
+          const sb = this.cadToScreen(b[0], b[1]);
+          ctx.moveTo(sa[0], sa[1]);
+          ctx.lineTo(sb[0], sb[1]);
+        }
+        ctx.stroke();
+
+        // Nội dung chữ trong khung tên
+        const fontPx = Math.max(8, Math.round(this.viewScale * 3.1));
+        ctx.textBaseline = "middle";
+
+        ctx.fillStyle = "#111827";
+        ctx.font = `700 ${fontPx + 2}px system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        const [cTitleX, cTitleY] = this.cadToScreen(tx + 102.5, ty + 24);
+        ctx.fillText(this.doc.meta.part_name || "BAN VE CHI TIET", cTitleX, cTitleY);
+
+        if (this.doc.meta.material) {
+          ctx.font = `500 ${fontPx - 1}px system-ui, sans-serif`;
+          const [cMatX, cMatY] = this.cadToScreen(tx + 90, ty + 8);
+          ctx.fillText(`Vật liệu: ${this.doc.meta.material}`, cMatX, cMatY);
+        }
+
+        ctx.font = `700 ${fontPx - 1}px system-ui, sans-serif`;
+        const [cScX, cScY] = this.cadToScreen(tx + 127.5, ty + 8);
+        ctx.fillText(`Tỉ lệ ${this.doc.meta.scale_label}`, cScX, cScY);
+
+        if (this.doc.meta.org_name) {
+          const [cOrgX, cOrgY] = this.cadToScreen(tx + 32.5, ty + 4);
+          ctx.fillText(this.doc.meta.org_name, cOrgX, cOrgY);
+        }
+
+        ctx.fillStyle = "#374151";
+        ctx.font = `500 ${fontPx - 1}px system-ui, sans-serif`;
+        ctx.textAlign = "left";
+        const [cVeX, cVeY] = this.cadToScreen(tx + 3, ty + 24);
+        ctx.fillText(this.doc.meta.author ? `Vẽ: ${this.doc.meta.author}` : "Vẽ:", cVeX, cVeY);
+
+        const [cKtX, cKtY] = this.cadToScreen(tx + 3, ty + 12);
+        ctx.fillText(this.doc.meta.checker ? `K.tra: ${this.doc.meta.checker}` : "K.tra:", cKtX, cKtY);
+
+        // Yêu cầu kỹ thuật phía trên khung tên
+        const reqLines = (this.doc.meta.req_text || "").split("\n").map(s => s.trim()).filter(Boolean);
+        if (reqLines.length > 0) {
+          const baseY = ty + 36 + reqLines.length * 4.5;
+          ctx.fillStyle = "#111827";
+          ctx.font = `700 ${fontPx}px system-ui, sans-serif`;
+          const [rx0, ry0] = this.cadToScreen(tx, baseY);
+          ctx.fillText("YÊU CẦU KỸ THUẬT:", rx0, ry0);
+
+          ctx.font = `400 ${fontPx - 1}px system-ui, sans-serif`;
+          reqLines.forEach((line, idx) => {
+            const [lx, ly] = this.cadToScreen(tx, baseY - (idx + 1) * 4.5);
+            ctx.fillText(line, lx, ly);
+          });
+        }
+
+        // Vẽ toàn bộ thực thể hình học
+        for (const ent of this.doc.entities) {
+          const isSel = (ent.id === this.selectedId);
+          const spec = CadDocument.LAYERS[ent.layer] || CadDocument.LAYERS.NET_LIEN_DAM;
+          const color = isSel ? "#F97316" : spec.uiColor;
+          const lineWidth = spec.uiWidth + (isSel ? 1.4 : 0);
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = lineWidth;
+          ctx.setLineDash(spec.uiDash);
+
+          if (ent.type === "LINE") {
+            const s1 = this.cadToScreen(ent.p1[0], ent.p1[1]);
+            const s2 = this.cadToScreen(ent.p2[0], ent.p2[1]);
+            ctx.beginPath();
+            ctx.moveTo(s1[0], s1[1]);
+            ctx.lineTo(s2[0], s2[1]);
+            ctx.stroke();
+          } else if (ent.type === "CIRCLE") {
+            const [scx, scy] = this.cadToScreen(ent.center[0], ent.center[1]);
+            const rPx = ent.radius * this.viewScale;
+            ctx.beginPath();
+            ctx.arc(scx, scy, rPx, 0, Math.PI * 2);
+            ctx.stroke();
+          } else if (ent.type === "DIM") {
+            ctx.setLineDash([]);
+            this.renderDimension(ctx, ent, color, fontPx);
+          }
+        }
+        ctx.setLineDash([]);
+
+        // Điểm bắt dính Object Snap (OSnap)
+        if (this.currentSnap) {
+          const [sx, sy] = this.cadToScreen(this.currentSnap[0], this.currentSnap[1]);
+          ctx.strokeStyle = "#EA580C";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(sx - 4.5, sy - 4.5, 9, 9);
+        }
+
+        this.updateStatusBar();
+      },
+
+      renderDimension(ctx, ent, color, fontPx) {
+        const [p1, p2, offset] = [ent.p1, ent.p2, ent.offset];
+        const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+        const L = Math.hypot(dx, dy);
+        if (L < 0.1) return;
+
+        const nx = -dy / L, ny = dx / L;
+        const sign = offset >= 0 ? 1 : -1;
+
+        const q1 = [p1[0] + offset * nx, p1[1] + offset * ny];
+        const q2 = [p2[0] + offset * nx, p2[1] + offset * ny];
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.05;
+        ctx.beginPath();
+        const ext1A = this.cadToScreen(p1[0] + sign * nx, p1[1] + sign * ny);
+        const ext1B = this.cadToScreen(q1[0] + 2 * sign * nx, q1[1] + 2 * sign * ny);
+        const ext2A = this.cadToScreen(p2[0] + sign * nx, p2[1] + sign * ny);
+        const ext2B = this.cadToScreen(q2[0] + 2 * sign * nx, q2[1] + 2 * sign * ny);
+        ctx.moveTo(ext1A[0], ext1A[1]); ctx.lineTo(ext1B[0], ext1B[1]);
+        ctx.moveTo(ext2A[0], ext2A[1]); ctx.lineTo(ext2B[0], ext2B[1]);
+
+        const sq1 = this.cadToScreen(q1[0], q1[1]);
+        const sq2 = this.cadToScreen(q2[0], q2[1]);
+        ctx.moveTo(sq1[0], sq1[1]); ctx.lineTo(sq2[0], sq2[1]);
+        ctx.stroke();
+
+        // Mũi tên 2 đầu
+        const drawArrow = (from, to) => {
+          const ang = Math.atan2(to[1] - from[1], to[0] - from[0]);
+          const headLen = 7.5;
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.moveTo(to[0], to[1]);
+          ctx.lineTo(to[0] - headLen * Math.cos(ang - 0.35), to[1] - headLen * Math.sin(ang - 0.35));
+          ctx.lineTo(to[0] - headLen * Math.cos(ang + 0.35), to[1] - headLen * Math.sin(ang + 0.35));
+          ctx.closePath();
+          ctx.fill();
+        };
+        drawArrow(sq2, sq1);
+        drawArrow(sq1, sq2);
+
+        // Chữ số kích thước
+        const mx = (q1[0] + q2[0]) / 2 + 2.6 * sign * nx;
+        const my = (q1[1] + q2[1]) / 2 + 2.6 * sign * ny;
+        const [smx, smy] = this.cadToScreen(mx, my);
+        ctx.fillStyle = color;
+        ctx.font = `700 ${fontPx + 1}px system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(ent.text, smx, smy);
+      },
+
+      /* -----------------------------------------------------------------------
+         TƯƠNG TÁC VẼ, BẮT ĐIỂM, CHỌN & SỬA TRÊN CANVAS
+         ----------------------------------------------------------------------- */
+      getLocalPointer(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        return [e.clientX - rect.left, e.clientY - rect.top];
+      },
+
+      findSnap(xMm, yMm, tolMm = 3.5) {
+        let best = null;
+        let bestD = tolMm;
+        for (const [px, py, kind] of this.doc.getSnapPoints()) {
+          const d = Math.hypot(px - xMm, py - yMm);
+          if (d < bestD) {
+            bestD = d;
+            best = [px, py, kind];
+          }
+        }
+        return best;
+      },
+
+      applyOrtho(p1, p2) {
+        if (!this.orthoMode || !p1) return p2;
+        const dx = Math.abs(p2[0] - p1[0]);
+        const dy = Math.abs(p2[1] - p1[1]);
+        return dx >= dy ? [p2[0], p1[1]] : [p1[0], p2[1]];
+      },
+
+      segDist(p, a, b) {
+        const dx = b[0] - a[0], dy = b[1] - a[1];
+        if (dx === 0 && dy === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+        const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy)));
+        return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+      },
+
+      hitTest(xMm, yMm, tolMm = 3.2) {
+        for (let i = this.doc.entities.length - 1; i >= 0; i--) {
+          const ent = this.doc.entities[i];
+          if (ent.type === "LINE") {
+            if (this.segDist([xMm, yMm], ent.p1, ent.p2) <= tolMm) return ent;
+          } else if (ent.type === "CIRCLE") {
+            if (Math.abs(Math.hypot(xMm - ent.center[0], yMm - ent.center[1]) - ent.radius) <= tolMm) return ent;
+          } else if (ent.type === "DIM") {
+            const [p1, p2, offset] = [ent.p1, ent.p2, ent.offset];
+            const dx = p2[0] - p1[0], dy = p2[1] - p1[1];
+            const L = Math.hypot(dx, dy);
+            if (L > 0.1) {
+              const nx = -dy / L, ny = dx / L;
+              const q1 = [p1[0] + offset * nx, p1[1] + offset * ny];
+              const q2 = [p2[0] + offset * nx, p2[1] + offset * ny];
+              if (this.segDist([xMm, yMm], q1, q2) <= tolMm + 2.5) return ent;
+            }
+          }
+        }
+        return null;
+      },
+
+      onPointerMove(e) {
+        const [sx, sy] = this.getLocalPointer(e);
+
+        if (this.isPanning && this.panStart) {
+          this.viewOx = this.panStart[2] + (sx - this.panStart[0]);
+          this.viewOy = this.panStart[3] + (sy - this.panStart[1]);
+          this.redraw();
+          return;
+        }
+
+        const [xMm, yMm] = this.screenToCad(sx, sy);
+        const snap = this.findSnap(xMm, yMm);
+        this.currentSnap = snap;
+
+        let pt = snap ? [snap[0], snap[1]] : [xMm, yMm];
+        if (this.draftP1 && ["NET_LIEN_DAM", "NET_DUT_MANH", "NET_GACH_CHAM", "DIM"].includes(this.activeTool)) {
+          pt = this.applyOrtho(this.draftP1, pt);
+        }
+        this.lastMouseMm = pt;
+
+        this.redraw();
+
+        // Vẽ nét nháp đang kéo chuột
+        if (this.draftP1) {
+          const s1 = this.cadToScreen(this.draftP1[0], this.draftP1[1]);
+          const s2 = this.cadToScreen(pt[0], pt[1]);
+          const ctx = this.ctx;
+          ctx.strokeStyle = "#F97316";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath();
+          if (this.activeTool === "CIRCLE") {
+            const rPx = Math.hypot(s2[0] - s1[0], s2[1] - s1[1]);
+            ctx.arc(s1[0], s1[1], rPx, 0, Math.PI * 2);
+          } else {
+            ctx.moveTo(s1[0], s1[1]);
+            ctx.lineTo(s2[0], s2[1]);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      },
+
+      onPointerDown(e) {
+        const [sx, sy] = this.getLocalPointer(e);
+
+        // Chuột giữa hoặc Space + chuột trái để Pan
+        if (e.button === 1 || (e.button === 0 && this.spaceDown)) {
+          this.isPanning = true;
+          this.panStart = [sx, sy, this.viewOx, this.viewOy];
+          return;
+        }
+
+        if (e.button !== 0) return;
+
+        const [xMm, yMm] = this.screenToCad(sx, sy);
+        const snap = this.findSnap(xMm, yMm);
+        const pt = snap ? [snap[0], snap[1]] : [xMm, yMm];
+
+        if (this.activeTool === "SELECT") {
+          const ent = this.hitTest(xMm, yMm);
+          this.selectedId = ent ? ent.id : null;
+          this.redraw();
+        } else {
+          if (!this.draftP1) {
+            this.draftP1 = pt;
+          } else {
+            if (this.activeTool === "CIRCLE") {
+              const r = Math.hypot(pt[0] - this.draftP1[0], pt[1] - this.draftP1[1]);
+              this.doc.addCircle(this.draftP1, r, "NET_LIEN_DAM", true, true);
+            } else if (this.activeTool === "DIM") {
+              const p2 = this.applyOrtho(this.draftP1, pt);
+              this.doc.addDimension(this.draftP1, p2, 7.0, null, "NET_LIEN_MANH", true);
+            } else {
+              const p2 = this.applyOrtho(this.draftP1, pt);
+              this.doc.addLine(this.draftP1, p2, this.activeTool, true);
+            }
+            this.draftP1 = null;
+            this.redraw();
+          }
+        }
+      },
+
+      onDoubleClick(e) {
+        const [sx, sy] = this.getLocalPointer(e);
+        const [xMm, yMm] = this.screenToCad(sx, sy);
+
+        // Nhấp đúp vào khung tên góc phải dưới (147..287 mm, 10..42 mm)
+        if (xMm >= 147.0 && xMm <= 287.0 && yMm >= 10.0 && yMm <= 42.0) {
+          this.openTitleBlockModal();
+          return;
+        }
+
+        // Nhấp đúp vào số kích thước để chỉnh sửa
+        const ent = this.hitTest(xMm, yMm);
+        if (ent && ent.type === "DIM") {
+          this.editingDimId = ent.id;
+          const inp = document.getElementById("inputDimValue");
+          inp.value = ent.text;
+          document.getElementById("dimEditModal").classList.add("open");
+          setTimeout(() => inp.focus(), 50);
+        }
+      },
+
+      onWheel(e) {
+        e.preventDefault();
+        const [sx, sy] = this.getLocalPointer(e);
+        const factor = e.deltaY < 0 ? 1.12 : 0.88;
+        const newScale = Math.max(0.8, Math.min(16.0, this.viewScale * factor));
+        const [cx, cy] = this.screenToCad(sx, sy);
+
+        this.viewScale = newScale;
+        this.viewOx = sx - cx * this.viewScale;
+        this.viewOy = sy - (210.0 - cy) * this.viewScale;
+        this.redraw();
+      },
+
+      cancelAction() {
+        this.draftP1 = null;
+        this.selectedId = null;
+        this.redraw();
+      },
+
+      deleteSelected() {
+        if (this.selectedId !== null) {
+          this.doc.deleteEntity(this.selectedId);
+          this.selectedId = null;
+          this.redraw();
+        }
+      },
+
+      changeSelectedLayer(newLayer) {
+        if (this.selectedId === null) {
+          this.showToast("Hãy chọn công cụ 'Chọn / Sửa' và nhấp vào đường nét cần đổi lớp trước.", "warn");
+          return;
+        }
+        const ent = this.doc.entities.find(e => e.id === this.selectedId);
+        if (ent && (ent.type === "LINE" || ent.type === "CIRCLE")) {
+          this.doc.commitState();
+          ent.layer = newLayer;
+          this.redraw();
+          this.showToast(`Đã đổi sang ${CadDocument.LAYERS[newLayer].name}`);
+        }
+      },
+
+      undo() {
+        if (this.doc.undo()) {
+          this.selectedId = null;
+          this.redraw();
+        }
+      },
+
+      redo() {
+        if (this.doc.redo()) {
+          this.selectedId = null;
+          this.redraw();
+        }
+      },
+
+      updateStatusBar() {
+        const [x, y] = this.lastMouseMm;
+        const snapTxt = this.currentSnap ? ` | OSnap: ${this.currentSnap[2]}` : "";
+        document.getElementById("statusCoords").textContent =
+          `Tọa độ: (${x.toFixed(1)}, ${y.toFixed(1)}) mm | Khổ giấy: A4 (297 x 210 mm)${snapTxt}`;
+        document.getElementById("statusScale").textContent =
+          `Tỉ lệ: ${this.doc.meta.scale_label} | Ortho(F8): ${this.orthoMode ? "ON" : "OFF"} | Đối tượng: ${this.doc.entities.length}`;
+      },
+
+      /* -----------------------------------------------------------------------
+         HỘP THOẠI KHUNG TÊN, SỬA KÍCH THƯỚC & XUẤT FILE DXF / PNG
+         ----------------------------------------------------------------------- */
+      openTitleBlockModal() {
+        document.getElementById("metaPartName").value = this.doc.meta.part_name;
+        document.getElementById("metaMaterial").value = this.doc.meta.material;
+        document.getElementById("metaAuthor").value = this.doc.meta.author;
+        document.getElementById("metaChecker").value = this.doc.meta.checker;
+        document.getElementById("metaOrg").value = this.doc.meta.org_name;
+        document.getElementById("metaReqText").value = this.doc.meta.req_text;
+        document.getElementById("titleBlockModal").classList.add("open");
+      },
+
+      saveTitleBlock() {
+        this.doc.meta.part_name = document.getElementById("metaPartName").value.trim() || "BAN VE CHI TIET";
+        this.doc.meta.material = document.getElementById("metaMaterial").value.trim();
+        this.doc.meta.author = document.getElementById("metaAuthor").value.trim();
+        this.doc.meta.checker = document.getElementById("metaChecker").value.trim();
+        this.doc.meta.org_name = document.getElementById("metaOrg").value.trim();
+        this.doc.meta.req_text = document.getElementById("metaReqText").value.trim();
+        this.closeModal("titleBlockModal");
+        this.redraw();
+        this.showToast("Đã cập nhật thông tin Khung tên!");
+      },
+
+      saveDimValue() {
+        const val = document.getElementById("inputDimValue").value.trim();
+        if (val && this.editingDimId !== null) {
+          const ent = this.doc.entities.find(e => e.id === this.editingDimId);
+          if (ent && ent.type === "DIM") {
+            this.doc.commitState();
+            ent.text = val;
+            this.redraw();
+            this.showToast(`Đã cập nhật kích thước: ${val}`);
+          }
+        }
+        this.editingDimId = null;
+        this.closeModal("dimEditModal");
+      },
+
+      closeModal(id) {
+        document.getElementById(id).classList.remove("open");
+      },
+
+      exportDxf() {
+        if (!this.doc.entities.length) {
+          this.showToast("Bản vẽ đang trống. Hãy tạo hoặc vẽ hình chiếu trước khi xuất DXF.", "warn");
+          return;
+        }
+        const dxfContent = TCVNDxfExporter.export(this.doc);
+        const blob = new Blob([dxfContent], { type: "application/dxf" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const safeName = (this.doc.meta.part_name || "BanVe").replace(/[^a-zA-Z0-9_-]/g, "_");
+        a.href = url;
+        a.download = `${safeName}_TCVN.dxf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        this.showToast("Đã xuất file CAD (.DXF) chuẩn TCVN thành công!");
+      },
+
+      exportPng() {
+        const prevSelected = this.selectedId;
+        const prevSnap = this.currentSnap;
+        this.selectedId = null;
+        this.currentSnap = null;
+        this.redraw();
+
+        const dataUrl = this.canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        const safeName = (this.doc.meta.part_name || "BanVe").replace(/[^a-zA-Z0-9_-]/g, "_");
+        a.href = dataUrl;
+        a.download = `${safeName}_TCVN.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        this.selectedId = prevSelected;
+        this.currentSnap = prevSnap;
+        this.redraw();
+        this.showToast("Đã lưu ảnh bản vẽ PNG!");
+      }
+    };
+
+    window.addEventListener("DOMContentLoaded", () => App.init());
+  </script>
+</body>
+</html>
